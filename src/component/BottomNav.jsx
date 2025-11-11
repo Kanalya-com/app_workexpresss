@@ -15,9 +15,9 @@ export default function BottomNav() {
   return (
     <div
       className="
-        md:hidden fixed bottom-0 left-0 right-0
-        bg-white dark:bg-gray-900
-        border-t border-gray-200 dark:border-gray-700
+        md:hidden fixed -bottom-1 left-0 right-0
+        bg-white dark:bg-[#01060c]
+        border-t border-gray-200 dark:border-[#01060c]
         shadow-lg flex justify-around py-2 sm:py-3 z-50
         transition-colors duration-300
       "
@@ -34,7 +34,7 @@ export default function BottomNav() {
               flex flex-col items-center justify-center px-4 py-1 rounded-xl transition-all duration-200
               ${
                 active
-                  ? "text-[#b71f4b] dark:text-[#f2af1e] bg-rose-50 dark:bg-[#1f2937] shadow-inner"
+                  ? "text-orange-500 dark:text-pink-500 bg-rose-50 dark:bg-[#01060c] shadow-inner"
                   : "text-gray-500 dark:text-gray-400 hover:text-[#b71f4b] dark:hover:text-[#f2af1e]"
               }
             `}
@@ -43,7 +43,7 @@ export default function BottomNav() {
               size={22}
               className={`mb-1 transition-colors duration-300 ${
                 active
-                  ? "text-[#b71f4b] dark:text-[#f2af1e]"
+                  ? "text-orange-500 dark:text-pink-500"
                   : "text-gray-500 dark:text-gray-400"
               }`}
             />

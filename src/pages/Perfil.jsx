@@ -72,6 +72,8 @@ export default function Perfil() {
         .update({
           telefono: cliente.telefono,
           direccion: cliente.direccion,
+          cedula: cliente.cedula,
+          email: cliente.email
         })
         .eq("id_cliente", cliente.id_cliente);
 
@@ -87,17 +89,17 @@ export default function Perfil() {
   if (loading) return <Loading />;
 
 return (
-  <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+  <div className="flex min-h-screen bg-gray-50 dark:bg-[#01060c] transition-colors duration-300">
     <Sidebar />
 
     <main className="flex-1 ml-0 md:ml-20 pb-20 md:pb-0">
       {/* Header */}
-      <div className="bg-[#b71f4b] dark:bg-gray-900 text-white dark:text-gray-100 p-6 flex items-center justify-start shadow-md dark:shadow-none">
-        <h1 className="text-lg font-semibold tracking-wide">Mi Perfil</h1>
+      <div className="bg-white dark:bg-[#01060c] text-gray-900 dark:text-gray-100 p-6 flex items-center justify-start shadow-md dark:shadow-none">
+        <h1 className="text-2xl font-semibold tracking-wide">Mi Perfil</h1>
       </div>
 
       {/* Tabs */}
-      <div className="flex justify-around bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300">
+      <div className="flex justify-around bg-white dark:bg-[#01060c] border-b border-gray-100 dark:border-gray-700 transition-colors duration-300">
         {[
           { key: "personal", label: "Personal", icon: <IdCard size={16} /> },
           { key: "seguridad", label: "Seguridad", icon: <Shield size={16} /> },
@@ -107,14 +109,14 @@ return (
             onClick={() => setTab(item.key)}
             className={`flex items-center justify-center gap-2 flex-1 py-3 text-sm font-medium border-b-2 transition-all duration-200 ${
               tab === item.key
-                ? "text-[#b71f4b] dark:text-[#f2af1e] border-[#b71f4b] dark:border-[#f2af1e]"
-                : "text-gray-500 dark:text-gray-400 border-transparent hover:text-[#b71f4b]/80 dark:hover:text-[#f2af1e]/80"
+                ? "text-orange-500 border-orange-500 dark:text-pink-500 dark:border-pink-500"
+                : "text-gray-500 dark:text-gray-400 border-transparent hover:text-[#f2af1e]/80"
             }`}
           >
             <span
               className={`transition-transform ${
                 tab === item.key
-                  ? "scale-110 text-[#b71f4b] dark:text-[#f2af1e]"
+                  ? "scale-110 dark:text-pink-500"
                   : "text-gray-400 dark:text-gray-500"
               }`}
             >
@@ -126,7 +128,7 @@ return (
       </div>
 
       {/* Contenido */}
-      <div className="p-4 md:p-8 w-full bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+      <div className="p-4 md:p-8 w-full bg-gray-50 dark:bg-[#01060c] transition-colors duration-300">
         {tab === "personal" && (
           <Personal
             cliente={cliente}
@@ -207,7 +209,7 @@ function Personal({ cliente, editMode, setEditMode, saving, handleSave, setClien
 
 
       {/* 🔹 Información personal */}
-     <div className="md:w-[50%] w-full bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-md space-y-5 border border-gray-100 dark:border-gray-800">
+     <div className="md:w-[50%] w-full bg-white dark:bg-[#040c13] rounded-2xl p-8 shadow-md space-y-5 border border-gray-100 dark:border-gray-800">
   <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
     Información Personal
   </h3>
@@ -218,9 +220,21 @@ function Personal({ cliente, editMode, setEditMode, saving, handleSave, setClien
           value={`${cliente.nombre} ${cliente.apellido}`}
           icon={<User />}
         />
-        <Info label="Correo" value={cliente.email} icon={<Mail />} />
-        <Info label="Cédula" value={cliente.cedula} icon={<IdCard />} />
-
+        <EditableInfo
+          label="Correo"
+          value={cliente.email || ""}
+          onChange={(v) => setCliente({ ...cliente, email: v })}
+          icon={<Mail />}
+          editable={editMode}
+        />
+        {/* <Info label="Cédula" value={cliente.cedula} icon={<IdCard />} /> */}
+        <EditableInfo
+          label="Cédula"
+          value={cliente.cedula || ""}
+          onChange={(v) => setCliente({ ...cliente, cedula: v })}
+          icon={<IdCard />}
+          editable={editMode}
+        />
         <EditableInfo
           label="Teléfono"
           value={cliente.telefono || ""}
@@ -243,14 +257,14 @@ function Personal({ cliente, editMode, setEditMode, saving, handleSave, setClien
             <button
               onClick={handleSaveWithPopup}
               disabled={saving}
-              className="bg-[#b71f4b] hover:bg-[#a01744] text-white px-7 py-3 rounded-xl font-semibold transition-all text-sm md:text-base"
+              className="bg-linear-to-r from-orange-500 to-pink-500 text-white px-7 py-3 rounded-xl font-semibold transition-all text-sm md:text-base"
             >
               {saving ? "Guardando..." : "Guardar"}
             </button>
           ) : (
             <button
               onClick={() => setEditMode(true)}
-              className="flex items-center gap-2 bg-[#b71f4b] hover:bg-[#a01744] text-white p-5 rounded-full font-semibold transition-all"
+              className="flex items-center gap-2 bg-linear-to-r from-orange-500 to-pink-500 rounded-full p-5 text-white font-semibold transition-all"
             >
               <Edit size={20} />
             </button>
@@ -346,9 +360,9 @@ function Seguridad() {
   }, [popup.show]);
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm space-y-5 border border-gray-100 dark:border-gray-800">
+    <div className="bg-white dark:bg-[#040c13] rounded-2xl p-6 shadow-sm space-y-5 border border-gray-100 dark:border-gray-800">
       <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
-        <Lock className="w-5 h-5 text-[#b71f4b] dark:text-[#f2af1e]" />
+        <Lock className="w-5 h-5 text-orange-500 dark:text-pink-500" />
         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
           Seguridad y Privacidad
         </h3>
@@ -357,11 +371,11 @@ function Seguridad() {
       {/* 🔒 Cambiar contraseña */}
       <div
         onClick={handleChangePassword}
-        className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 p-4 rounded-xl cursor-pointer transition"
+        className="flex items-center justify-between bg-gray-50 dark:bg-[#040c13] border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 p-4 rounded-xl cursor-pointer transition"
       >
         <div className="flex items-center gap-3">
-          <div className="bg-[#b71f4b]/10 dark:bg-[#f2af1e]/10 p-2 rounded-full">
-            <Lock className="w-5 h-5 text-[#b71f4b] dark:text-[#f2af1e]" />
+          <div className="bg-orange-500/10 dark:bg-pink-500/10 p-2 rounded-full">
+            <Lock className="w-5 h-5 text-orange-500 dark:text-pink-500" />
           </div>
           <div>
             <h4 className="font-medium text-gray-800 dark:text-gray-100">
@@ -406,8 +420,8 @@ function Seguridad() {
 // ✅ Info.jsx
 export function Info({ label, value, icon }) {
   return (
-    <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 border border-gray-100 dark:border-gray-700">
-      <div className="text-[#b71f4b] dark:text-[#f2af1e]">{icon}</div>
+    <div className="flex items-center gap-3 bg-gray-50 dark:bg-[#040c13] rounded-xl px-4 py-3 border border-gray-100 dark:border-gray-700">
+      <div className="text-orange-500 dark:text-pink-500">{icon}</div>
       <div className="flex flex-col text-gray-700 dark:text-gray-200">
         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
           {label}
@@ -423,16 +437,16 @@ export function EditableInfo({ label, value, onChange, icon, editable }) {
     <div
       className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 ${
         editable
-          ? "border-2 border-[#b71f4b]/60 dark:border-[#f2af1e]/60 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-[#b71f4b]/30 dark:focus-within:ring-[#f2af1e]/30"
+          ? "border-2 border-orange-500/30 dark:border-pink-500/30 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-orange-500/30 dark:focus-within:ring-pink-500/30"
           : "border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900"
       }`}
     >
-      <div className="text-[#b71f4b] dark:text-[#f2af1e]">{icon}</div>
+      <div className="text-orange-500 dark:text-pink-500">{icon}</div>
       <div className="flex flex-col text-gray-700 dark:text-gray-200 w-full">
         <span
           className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${
             editable
-              ? "text-[#b71f4b] dark:text-[#f2af1e]"
+              ? "text-orange-500 dark:text-pink-500"
               : "text-gray-500 dark:text-gray-400"
           }`}
         >

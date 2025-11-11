@@ -22,42 +22,42 @@ export default function Casillero({ onModalChange, cliente }) {
   const [showModal, setShowModal] = useState(false);
   const [casilleros, setCasilleros] = useState([]);
   const [popupData, setPopupData] = useState({ show: false, message: "", type: "success" });
-
+  const [selectedItem, setSelectedItem] = useState(null);
   const showPopup = (message, type = "success") => setPopupData({ show: true, message, type });
   const handleClosePopup = () => setPopupData((prev) => ({ ...prev, show: false }));
 
-// 🔹 Bloquear scroll completamente cuando el modal está activo
-useEffect(() => {
-  if (onModalChange) onModalChange(showModal);
+  // 🔹 Bloquear scroll completamente cuando el modal está activo
+  useEffect(() => {
+    if (onModalChange) onModalChange(showModal);
 
-  if (showModal) {
-    const scrollY = window.scrollY;
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = "0";
-    document.body.style.right = "0";
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden"; // bloquea también html
-  } else {
-    const scrollY = document.body.style.top;
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.left = "";
-    document.body.style.right = "";
-    document.body.style.overflow = "";
-    document.documentElement.style.overflow = "";
-    window.scrollTo(0, parseInt(scrollY || "0") * -1); // restaura posición original
-  }
+    if (showModal) {
+      const scrollY = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden"; // bloquea también html
+    } else {
+      const scrollY = document.body.style.top;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+      window.scrollTo(0, parseInt(scrollY || "0") * -1); // restaura posición original
+    }
 
-  return () => {
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.left = "";
-    document.body.style.right = "";
-    document.body.style.overflow = "";
-    document.documentElement.style.overflow = "";
-  };
-}, [showModal, onModalChange]);
+    return () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [showModal, onModalChange]);
 
 
   // 🔹 Cargar casilleros
@@ -82,7 +82,7 @@ useEffect(() => {
         console.error("Error cargando casilleros:", error.message);
         return;
       }
-
+      
       const formatted = data.map((c) => ({
         id: c.id_casillero,
         tipo_envio: c.tb_tipo_envio?.nombre || "Desconocido",
@@ -113,27 +113,46 @@ useEffect(() => {
 
   const getNombreCasillero = () => {
     if (!cliente) return "Usuario ST";
+
     const nombreCompleto = `${cliente.nombre} ${cliente.apellido}`;
     const sucursal = (cliente?.sucursal || "")
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
+
+    // 🔸 Si el país es China, formato especial
+    if (activeCountry?.toLowerCase() === "china") {
+      return `${nombreCompleto} CBX9213`;
+    }
+
+    // 🔸 Lógica estándar para el resto
     let sufijo = "ST";
     if (sucursal.includes("chitre")) sufijo = "STC";
     else if (sucursal.includes("panama")) sufijo = "STP";
-    return activeTab === "Marítimo" ? `${nombreCompleto} ${sufijo} - Marítimo` : `${nombreCompleto} ${sufijo}`;
+
+    return activeTab === "Marítimo"
+      ? `${nombreCompleto} ${sufijo} - Marítimo`
+      : `${nombreCompleto} ${sufijo}`;
   };
 
   const getDireccion2 = () => {
+    // 🔸 Si el país es China, mostrar dirección2 del registro de BD
+    if (activeCountry?.toLowerCase() === "china" && selectedItem?.direccion2) {
+      return selectedItem.direccion2;
+    }
+
     const sucursal = (cliente?.sucursal || "")
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
+
     let sufijo = "ST";
     if (sucursal.includes("chitre")) sufijo = "STC";
     else if (sucursal.includes("panama")) sufijo = "STP";
+
     return activeTab === "Marítimo" ? `${sufijo} - Marítimo` : sufijo;
   };
+
 
   const handleCopyAll = (data) => {
     const text = `
@@ -183,10 +202,10 @@ WorkExpress - Envíos confiables
     <>
       <Popup show={popupData.show} message={popupData.message} type={popupData.type} onClose={handleClosePopup} />
 
-      <div className="max-w-96 relative bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-800 transition-colors">
+      <div className="h-full max-w-96 relative bg-white dark:bg-[#01060c] rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-800 transition-colors">
         {/* Título */}
         <div className="flex gap-2 items-center mb-4">
-          <MapPin className="w-6 h-6 text-[#b71f4b] dark:text-[#f2af1e]" />
+          <MapPin className="w-6 h-6 text-[#d30046]" />
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Mis Casilleros</h2>
         </div>
 
@@ -205,15 +224,21 @@ WorkExpress - Envíos confiables
                     <button
                       key={`${pais}-${tipo}`}
                       onClick={() => {
+                        const seleccionado = casilleros.find(
+                          (c) => c.pais === pais && c.tipo_envio === tipo
+                        );
+                        
+
+                        setSelectedItem(seleccionado); // 🔹 Guardamos el objeto correcto
                         setActiveCountry(pais);
                         setActiveTab(tipo);
                         setShowModal(true);
                       }}
-                      className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg font-medium text-sm transition-all shadow-sm ${
-                        isActive
-                          ? "bg-linear-to-r from-[#f2af1e] to-[#b71f4b] text-white"
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                      }`}
+
+                      className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg font-medium text-sm transition-all shadow-sm ${isActive
+                        ? "bg-linear-to-br from-[#d30046] via-[#db2fb2] to-pink-500 text-white"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        }`}
                     >
                       {tipo === "Aéreo" ? <Plane className="w-4 h-4" /> : <Ship className="w-4 h-4" />}
                       {tipo}
@@ -227,79 +252,97 @@ WorkExpress - Envíos confiables
 
         {/* Modal */}
         <AnimatePresence>
-          {showModal && (
-            <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowModal(false)}
-            >
-              <motion.div
-                className="bg-white dark:bg-gray-900 w-[92%] max-w-md rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 relative overflow-hidden max-h-[85vh] flex flex-col"
-                initial={{ y: 50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 50, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Header */}
-                <div className="flex justify-between items-start px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-1">
-                    {activeTab === "Aéreo" ? (
-                      <Plane className="w-5 h-5 text-[#b71f4b] dark:text-[#f2af1e]" />
-                    ) : (
-                      <Ship className="w-5 h-5 text-[#b71f4b] dark:text-[#f2af1e]" />
-                    )}
-                    Detalles de envío {activeTab} ({activeCountry})
-                  </h3>
-                  <button
-                    onClick={() => setShowModal(false)}
-                    className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
+  {showModal && (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={() => setShowModal(false)}
+    >
+      <motion.div
+        className="bg-white dark:bg-[#01060c] w-[92%] max-w-md rounded-3xl shadow-xl border border-gray-100 dark:border-[#01060c] relative overflow-hidden max-h-[85vh] flex flex-col"
+        initial={{ y: 50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 50, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex justify-between items-start px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-1">
+            {activeTab === "Aéreo" ? (
+              <Plane className="w-5 h-5 text-[#d30046]" />
+            ) : (
+              <Ship className="w-5 h-5 text-[#d30046]" />
+            )}
+            Casillero {activeCountry} - {activeTab}
+          </h3>
+          <button
+            onClick={() => {
+              setSelectedItem(null);
+              setShowModal(false);
+            }}
+            className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-                {/* Contenido */}
-                <div className="overflow-y-auto flex-1 px-6 py-4">
-                  {item ? (
-                    <>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                        Información completa del casillero
-                      </p>
-                      <div className="space-y-0">
-                        <InfoRow icon={User} label="Nombre Completo" value={getNombreCasillero()} color="bg-blue-500" />
-                        <InfoRow icon={MapPin} label="Dirección" value={item.direccion1} color="bg-red-500" />
-                        <InfoRow icon={MapPin} label="Dirección 2" value={getDireccion2()} color="bg-red-500" />
-                        <InfoRow icon={Landmark} label="Ciudad" value={item.ciudad} color="bg-purple-500" />
-                        <InfoRow icon={Flag} label="Estado" value={item.estado} color="bg-cyan-500" />
-                        <InfoRow icon={Hash} label="Código Postal" value={item.codigo_postal} color="bg-orange-500" />
-                        <InfoRow icon={Globe} label="País" value={item.pais} color="bg-cyan-500" />
-                        <InfoRow icon={Phone} label="Teléfono" value={item.telefono} color="bg-orange-500" />
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-center text-gray-500 dark:text-gray-400">No hay datos disponibles.</p>
-                  )}
-                </div>
-
-                {/* Botón copiar */}
-                {item && (
-                  <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-                    <button
-                      onClick={() => handleCopyAll(item)}
-                      className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-[#f2af1e] to-[#b71f4b] text-white dark:text-gray-900 py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
-                    >
-                      <ClipboardCopy className="w-4 h-4" />
-                      Copiar Información
-                    </button>
-                  </div>
-                )}
-              </motion.div>
-            </motion.div>
+        {/* Contenido */}
+        <div className="overflow-y-auto no-scrollbar flex-1 px-6 py-4">
+          {selectedItem ? (
+            <>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Información completa del casillero
+              </p>
+              <div className="space-y-0">
+                <InfoRow icon={User} label="Nombre Completo" value={getNombreCasillero()} color="bg-blue-500" />
+                <InfoRow icon={MapPin} label="Dirección" value={selectedItem.direccion1} color="bg-red-500" />
+                <InfoRow icon={MapPin} label="Dirección 2" value={getDireccion2()} color="bg-red-500" />
+                <InfoRow icon={Landmark} label="Ciudad" value={selectedItem.ciudad} color="bg-purple-500" />
+                <InfoRow icon={Flag} label="Estado" value={selectedItem.estado} color="bg-cyan-500" />
+                <InfoRow icon={Hash} label="Código Postal" value={selectedItem.codigo_postal} color="bg-orange-500" />
+                <InfoRow icon={Globe} label="País" value={selectedItem.pais} color="bg-cyan-500" />
+                <InfoRow icon={Phone} label="Teléfono" value={selectedItem.telefono} color="bg-orange-500" />
+              </div>
+            </>
+          ) : (
+            <p className="text-center text-gray-500 dark:text-gray-400">
+              No hay datos disponibles.
+            </p>
           )}
-        </AnimatePresence>
+        </div>
+
+        {/* Botón copiar */}
+        {item && (
+          <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-[#01060c]">
+            <button
+              onClick={() => handleCopyAll(item)}
+              className="w-full flex items-center justify-center gap-2 bg-linear-to-br from-[#d30046] via-orange-500 to-[#db2fb2] text-white py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
+            >
+              <ClipboardCopy className="w-4 h-4" />
+              Copiar Información
+            </button>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
+{/* Estilo para ocultar scrollbar */}
+<style>{`
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+`}</style>
+
       </div>
     </>
   );
+  
 }

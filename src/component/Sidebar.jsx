@@ -27,8 +27,8 @@ export default function Sidebar() {
     <aside className="
       hidden md:flex flex-col justify-between items-center
       w-20 h-screen fixed left-0 top-0
-      bg-white dark:bg-gray-900
-      border-r border-gray-200 dark:border-gray-800
+      bg-white dark:bg-[#01060c]
+      border-r border-gray-200 dark:border-[#01060c]
       shadow-md py-6 transition-colors duration-300
     ">
       {/* 🔹 Logo */}
@@ -51,8 +51,8 @@ export default function Sidebar() {
               className={`
                 p-3 rounded-xl transition-all duration-200
                 ${active
-                  ? "bg-linear-to-br from-[#b71f4b] to-[#ff4b2b] dark:from-[#f2af1e] dark:to-[#f2c94c] text-white dark:text-gray-900 shadow-lg"
-                  : "text-gray-500 dark:text-gray-400 hover:text-[#b71f4b] dark:hover:text-[#f2af1e]"
+                  ? "cursor-pointer bg-linear-to-br from-[#b71f4b] to-[#ff4b2b] dark:from-[#d30046] dark:via-[#db2fb2] dark:to-pink-500 text-white dark:text-gray-900 shadow-lg"
+                  : "text-gray-500 dark:text-gray-400 hover:text-[#b71f4b] dark:hover:text-white cursor-pointer"
                 }
               `}
             >
@@ -71,10 +71,10 @@ export default function Sidebar() {
               key={id}
               onClick={() => navigate(path)}
               className={`
-                p-3 rounded-xl border transition-all duration-200
+                p-3 rounded-xl  duration-200 cursor-pointer
                 ${active
-                  ? "border-[#b71f4b] dark:border-[#f2af1e] text-[#b71f4b] dark:text-[#f2af1e]"
-                  : "border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#b71f4b] dark:hover:border-[#f2af1e] hover:text-[#b71f4b] dark:hover:text-[#f2af1e]"
+                  ? "cursor-pointer bg-linear-to-br from-[#b71f4b] to-[#ff4b2b] dark:from-[#d30046] dark:via-[#db2fb2] dark:to-pink-500 text-white dark:text-gray-900 shadow-lg"
+                  : "border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#b71f4b] dark:hover:border-[#f2af1e] hover:text-[#d30046] dark:hover:text-white"
                 }
               `}
             >

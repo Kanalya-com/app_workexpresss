@@ -81,7 +81,7 @@ export default function SeguroPaqueteria({ clienteId, precio = 0.99, onPopup }) 
     <div
       className={`relative rounded-2xl p-5 shadow-md overflow-hidden transition-all border-2 
         ${activo
-          ? "border-[#b71f4b] dark:border-[#f2af1e]"
+          ? "border-orange-500 dark:border-pink-500"
           : "border-gray-300 dark:border-gray-700"
         } 
         bg-white dark:bg-gray-900`}
@@ -89,27 +89,24 @@ export default function SeguroPaqueteria({ clienteId, precio = 0.99, onPopup }) 
       {/* Encabezado */}
       <div className="flex items-center justify-between mb-3">
         <h3
-          className={`font-semibold text-base transition-colors ${
-            activo
-              ? "text-[#b71f4b] dark:text-[#f2af1e]"
+          className={`font-semibold text-base transition-colors ${activo
+              ? "text-orange-500 dark:text-pink-500"
               : "text-gray-600 dark:text-gray-400"
-          }`}
+            }`}
         >
           Seguro de Paquetería
         </h3>
         <div
-          className={`p-2 rounded-full transition-colors ${
-            activo
-              ? "bg-[#b71f4b]/10 dark:bg-[#f2af1e]/10"
+          className={`p-2 rounded-full transition-colors ${activo
+              ? "bg-orange-500/30 dark:bg-pink-500/30"
               : "bg-gray-200 dark:bg-gray-800"
-          }`}
+            }`}
         >
           <ShieldCheck
-            className={`w-5 h-5 transition-colors ${
-              activo
-                ? "text-[#b71f4b] dark:text-[#f2af1e]"
+            className={`w-5 h-5 transition-colors ${activo
+                ? "text-orange-500 dark:text-pink-500"
                 : "text-gray-400 dark:text-gray-500"
-            }`}
+              }`}
           />
         </div>
       </div>
@@ -121,14 +118,13 @@ export default function SeguroPaqueteria({ clienteId, precio = 0.99, onPopup }) 
 
       {/* Precio */}
       <p
-        className={`text-3xl font-extrabold tracking-tight ${
-          activo
-            ? "text-[#b71f4b] dark:text-[#f2af1e]"
-            : "text-gray-500 dark:text-gray-400"
-        }`}
+        className={`text-3xl font-extrabold tracking-tight ${activo
+            ? "text-orange-500 dark:text-pink-500"
+            : "text-gray-300"
+          }`}
       >
         ${precio.toFixed(2)}
-        <span className="text-base text-gray-500 dark:text-gray-400 font-medium ml-1">
+        <span className="text-base text-gray-300 font-medium ml-1">
           / Paquete
         </span>
       </p>
@@ -136,9 +132,7 @@ export default function SeguroPaqueteria({ clienteId, precio = 0.99, onPopup }) 
       {/* Toggle Switch */}
       <div className="mt-5 flex items-center justify-between">
         <span
-          className={`text-sm font-medium ${
-            activo ? "text-[#b71f4b] dark:text-[#f2af1e]" : "text-gray-500 dark:text-gray-400"
-          }`}
+          className="text-sm font-medium text-orange-500 dark:text-pink-500"
         >
           {activo ? "Seguro Activo" : "Seguro Inactivo"}
         </span>
@@ -146,16 +140,14 @@ export default function SeguroPaqueteria({ clienteId, precio = 0.99, onPopup }) 
         <button
           onClick={handleToggleSeguro}
           disabled={loading}
-          className={`relative w-14 h-7 flex items-center rounded-full transition-all duration-300 ${
-            activo
-              ? "bg-[#b71f4b] dark:bg-[#f2af1e]"
+          className={`relative w-14 h-7 flex items-center rounded-full transition-all duration-300 ${activo
+              ? "bg-linear-to-r from-orange-500 to-pink-500 rounded-2xl "
               : "bg-gray-300 dark:bg-gray-700"
-          }`}
+            }`}
         >
           <span
-            className={`absolute left-1 top-1 w-5 h-5 bg-white dark:bg-gray-900 rounded-full shadow-sm transform transition-transform duration-300 ${
-              activo ? "translate-x-7" : "translate-x-0"
-            }`}
+            className={`absolute left-1 top-1 w-5 h-5 bg-white dark:bg-gray-900 rounded-full shadow-sm transform transition-transform duration-300 ${activo ? "translate-x-7" : "translate-x-0"
+              }`}
           ></span>
         </button>
       </div>

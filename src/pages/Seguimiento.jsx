@@ -87,35 +87,43 @@ export default function Seguimiento() {
 
   // 🔍 Buscar tracking
   const handleSearch = async (trackingId) => {
-    setIsLoading(true);
-    setTrackingData(null);
-    setError(null);
-    setShowModal(false);
-    setAllowOpen(false);
+    const result = await consultarTracking(trackingId);
+    if (result.error) {
+      setTrackingData(null);
+      setError(result);
 
-    try {
-      const result = await consultarTracking(trackingId);
-      if (!result.error && result.data) {
-        setTrackingData(result.data);
-        setTimeout(() => {
-          setShowModal(true);
-          setAllowOpen(true);
-        }, 1500);
-      } else {
-        setError({
-          type: "not_found",
-          message: result.message || "No se encontró información para este número de rastreo.",
-        });
-      }
-    } catch {
-      setError({
-        type: "network",
-        message: "Error de conexión. Verifica tu internet e intenta nuevamente.",
-      });
-    } finally {
-      setIsLoading(false);
+      // console.warn("⛔ No se guardará porque la API devolvió error");
+      return;
     }
+
+    // ✅ Solo guardar si la API respondió correctamente
+    try {
+      const { error: insertError } = await supabase
+        .from("tb_paquetes")
+        .upsert([
+          {
+            tracking_id: trackingId,
+            estado: result.data.current_status || "EN PROCESO",
+            fecha_actualizacion: new Date().toISOString(),
+          },
+        ])
+        .select();
+
+      if (insertError) {
+
+      } else {
+
+      }
+    } catch (err) {
+
+    }
+
+    setTrackingData(result.data);
+    setError(null);
+    setAllowOpen(true);
+    setShowModal(true);
   };
+
 
   // ✅ Confirmar agregar paquete a cuenta
   const handleConfirmAdd = async () => {
@@ -151,6 +159,13 @@ export default function Seguimiento() {
         setPopup({ show: true, message: "Este paquete ya fue reclamado por otro cliente.", type: "error" });
         return;
       }
+      console.log("🔍 Datos enviados a Supabase:", {
+        id_cliente: cliente.id_cliente,
+        correo_vinculado: cliente.email,
+        nombre_en_etiqueta: `${cliente.nombre} ${cliente.apellido}`,
+        estado: mapEstado(trackingData?.current_status),
+        tracking_id: String(trackingData.tracking_id).trim(),
+      });
 
       const { data, error } = await supabase
         .from("tb_paquetes")
@@ -158,10 +173,28 @@ export default function Seguimiento() {
           id_cliente: cliente.id_cliente,
           correo_vinculado: cliente.email,
           nombre_en_etiqueta: `${cliente.nombre} ${cliente.apellido}`,
-          estado: "Vinculado",
+          estado: mapEstado(trackingData?.current_status), // ✅ traducido
         })
         .eq("tracking_id", String(trackingData.tracking_id).trim())
         .select();
+      // 🧾 Registrar movimiento o pago asociado al paquete
+      const { error: insertLogError } = await supabase
+        .from("tb_pago_factura") // 👈 cámbialo si tu tabla tiene otro nombre
+        .insert([
+          {
+            id_cliente: cliente.id_cliente,
+            tracking_id: String(trackingData.tracking_id).trim(),
+            monto: 0, // si aplica un pago inicial, cámbialo
+            descripcion: `Paquete vinculado: ${mapEstado(trackingData?.current_status)}`,
+            fecha_registro: new Date().toISOString(),
+            id_metodo_pago:"a9600036-34e9-4ab0-883a-fad419195875",
+          },
+        ]);
+
+      if (insertLogError) {
+        console.error("⚠️ Error registrando movimiento:", insertLogError.message);
+      }
+
 
       if (error || data.length === 0) {
         setPopup({ show: true, message: "No se actualizó el paquete. Verifica los datos.", type: "error" });
@@ -184,7 +217,7 @@ export default function Seguimiento() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-[#0f172a] text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-[#01060c] text-[#040c13] dark:text-whitetransition-colors duration-300">
       {/* Sidebar */}
       <Sidebar />
 
@@ -192,8 +225,8 @@ export default function Seguimiento() {
       <main className="flex-1 ml-0 md:ml-20 pb-20 md:pb-0 p-6 flex flex-col items-center">
         {/* 🔹 Encabezado con botón de tema */}
         <div className="w-full flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-[#f2af1e]">
-            Seguimiento de Paquetes
+          <h1 className="text-2xl font-bold text-[#040c13] dark:text-white">
+            Mis Paquetes
           </h1>
 
         </div>
@@ -205,7 +238,7 @@ export default function Seguimiento() {
         <div className="w-full max-w-3xl mt-6 space-y-4">
           {allowOpen && trackingData && (
             <div className="flex justify-end mt-3">
-              
+
               <button
                 onClick={() => setShowModal(true)}
                 className="w-10 flex items-center justify-center bg-[#b71f4b] hover:bg-[#a01744] dark:bg-[#f2af1e] dark:hover:bg-[#e6c565] text-white  h-10 rounded-full shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 text-[12px]"
@@ -229,11 +262,11 @@ export default function Seguimiento() {
       {showModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-end md:items-center px-4">
           <div
-            className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 w-full max-w-md rounded-t-2xl md:rounded-2xl shadow-2xl transform transition-all duration-300"
+            className="bg-white dark:bg-[#040c13] text-gray-900 dark:text-gray-100 w-full max-w-md rounded-t-2xl md:rounded-2xl shadow-2xl transform transition-all duration-300"
             style={{ animation: `${closing ? "slideDown" : "slideUp"} 0.4s ease-out` }}
           >
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-gray-700">
-              <h2 className="text-lg font-bold text-gray-800 dark:text-[#f2af1e]">
+              <h2 className="text-2xl font-bold text-[#040c13] dark:text-white">
                 Agregar Paquete
               </h2>
               <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
@@ -246,9 +279,9 @@ export default function Seguimiento() {
                 ¿Quieres agregar este paquete a tu cuenta?
               </p>
 
-              <div className="bg-linear-to-br from-[#fdecef] to-[#f9dce2] dark:from-[#1f2937] dark:to-[#111827] rounded-xl p-4 border border-[#f3c2cc] dark:border-gray-700">
+              <div className="bg-white dark:bg-[#040c13] rounded-xl p-4 border border-gray-300 dark:border-gray-700">
                 <div className="flex items-center gap-3 mb-3">
-                  <Package className="w-5 h-5 text-[#b71f4b] dark:text-[#f2af1e]" />
+                  <Package className="w-5 h-5 text-orange-500 dark:text-pink-500" />
                   <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
                     Detalles del Paquete
                   </span>
@@ -268,9 +301,9 @@ export default function Seguimiento() {
                 </p>
               </div>
 
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+              <div className="bg-white dark:bg-[#040c13] rounded-xl p-4 border border-gray-300 dark:border-gray-700">
                 <div className="flex items-center gap-3 mb-3">
-                  <User className="w-5 h-5 text-[#b71f4b] dark:text-[#f2af1e]" />
+                  <User className="w-5 h-5 text-orange-500 dark:text-pink-500" />
                   <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
                     Información de tu Cuenta
                   </span>
@@ -290,14 +323,14 @@ export default function Seguimiento() {
             <div className="p-5 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleConfirmAdd}
-                className="flex-1 bg-[#b71f4b] dark:bg-[#f2af1e] hover:bg-[#a01744] dark:hover:bg-[#e6c565] text-white dark:text-gray-900 font-semibold rounded-xl py-3 flex items-center justify-center gap-2 transition-all"
+                className="flex-1 bg-linear-to-r from-orange-500 to-pink-500 rounded-2xl p-4 text-white font-semibold  flex items-center justify-center gap-2 transition-all"
               >
                 <CheckCircle2 className="w-5 h-5" />
                 <span>Agregar a mi cuenta</span>
               </button>
               <button
                 onClick={handleClose}
-                className="flex-1 border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-medium rounded-xl py-3 hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="flex-1 border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-medium rounded-2xl p-4 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancelar
               </button>

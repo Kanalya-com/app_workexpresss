@@ -1,56 +1,107 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Trash2, X } from "lucide-react";
+import { supabase } from "../lib/supabaseClient"; // 👈 asegúrate de tener esto configurado
 
-export default function Notificaciones({ onModalChange }) {
+export default function Notificaciones({ cliente, onModalChange }) {
   const [showModal, setShowModal] = useState(false);
-  const [notificaciones, setNotificaciones] = useState([
-    {
-      id: 1,
-      titulo: "Tu paquete ha llegado a Panamá 🇵🇦",
-      mensaje: "El paquete con tracking #WX123 está listo para retirar en la sucursal.",
-      fecha: "Hoy, 10:45 a.m.",
-    },
-    {
-      id: 2,
-      titulo: "Factura disponible 💳",
-      mensaje: "Ya puedes descargar la factura de tu envío #WX098.",
-      fecha: "Ayer, 5:20 p.m.",
-    },
-    {
-      id: 3,
-      titulo: "Nuevo beneficio disponible 🎁",
-      mensaje: "Has desbloqueado un cupón del 10% en tu próximo envío.",
-      fecha: "Hace 3 días",
-    },
-  ]);
+  const [notificaciones, setNotificaciones] = useState([]);
 
+  // 🔹 Cargar notificaciones al inicio
+  useEffect(() => {
+    console.log("🧠 Cliente recibido:", cliente);
+    const fetchNotificaciones = async () => {
+      if (!cliente?.id_cliente) return;
+      const { data, error } = await supabase
+        .from("tb_notificaciones")
+        .select("*")
+        .eq("id_cliente", cliente.id_cliente)
+        .order("fecha_envio", { ascending: false });
+      console.log(data)
+      if (error) console.error("❌ Error cargando notificaciones:", error.message);
+      else setNotificaciones(data || []);
+    };
+    
+    fetchNotificaciones();
+
+    // 🔹 Escuchar cambios en tiempo real
+    const canal = supabase
+      .channel("notificaciones-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // escucha INSERT, UPDATE, DELETE
+          schema: "public",
+          table: "tb_notificaciones",
+          filter: `id_cliente=eq.${cliente?.id_cliente}`,
+        },
+        (payload) => {
+          console.log("📡 Notificación detectada:", payload);
+
+          // 🔁 Sin volver a consultar, actualiza el estado local
+          setNotificaciones((prev) => {
+            if (payload.eventType === "INSERT") {
+              return [payload.new, ...prev];
+            } else if (payload.eventType === "UPDATE") {
+              return prev.map((n) =>
+                n.id_notificacion === payload.new.id_notificacion ? payload.new : n
+              );
+            } else if (payload.eventType === "DELETE") {
+              return prev.filter(
+                (n) => n.id_notificacion !== payload.old.id_notificacion
+              );
+            }
+            return prev;
+          });
+        }
+      )
+      .subscribe();
+
+    // Limpieza
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [cliente]);
+
+  // 🔹 Notificar al padre si el modal cambia
   useEffect(() => {
     if (onModalChange) onModalChange(showModal);
   }, [showModal, onModalChange]);
 
-  const eliminarNotificacion = (id) => {
-    setNotificaciones((prev) => prev.filter((n) => n.id !== id));
+  const eliminarNotificacion = async (id) => {
+  const { error } = await supabase
+    .from("tb_notificaciones")
+    .delete()
+    .eq("id_notificacion", id);
+
+  if (error) {
+    console.error("❌ Error eliminando notificación:", error.message);
+  } else {
+    // 👇 Actualiza el estado local instantáneamente
+    setNotificaciones((prev) =>
+      prev.filter((n) => n.id_notificacion !== id)
+    );
+  }
+};
+
+  const eliminarTodas = async () => {
+    await supabase.from("tb_notificaciones").delete().eq("id_cliente", cliente.id_cliente);
   };
 
+  // 🔹 Render
   return (
     <div>
-      {/* 🔹 Preview compacta */}
-      <div
-        onClick={() => setShowModal(true)}
-        className="relative flex items-center justify-center w-11 h-11 rounded-full border-2 border-[#f5b3c2] text-[#b71f4b] bg-white dark:bg-gray-800 dark:text-[#f2af1e] dark:border-[#f2af1e]/40 cursor-pointer hover:scale-105 transition shadow-sm"
-      >
-        <Bell className="w-6 h-6" />
-
-        {/* 🔴 Badge */}
+      {/* Icono con contador */}
+      <div onClick={() => setShowModal(true)} className="relative flex items-center justify-center w-11 h-11 cursor-pointer">
+        <Bell className="w-5 h-5" />
         {notificaciones.length > 0 && (
-          <div className="absolute -top-1 -right-1 bg-[#b71f4b] dark:bg-[#f2af1e] text-white dark:text-gray-900 text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-md">
+          <div className="absolute top-1 right-1 bg-red-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-md">
             {notificaciones.length}
           </div>
         )}
       </div>
 
-      {/* 🔹 Modal */}
+      {/* Modal */}
       <AnimatePresence>
         {showModal && (
           <motion.div
@@ -60,7 +111,7 @@ export default function Notificaciones({ onModalChange }) {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white dark:bg-gray-900 dark:text-gray-100 w-full max-w-sm rounded-3xl p-6 shadow-2xl relative overflow-y-auto max-h-[90vh] transition-colors duration-300"
+              className="bg-white dark:bg-gray-900 dark:text-gray-100 w-full max-w-sm rounded-3xl p-6 shadow-2xl relative overflow-y-auto max-h-[90vh]"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -90,7 +141,7 @@ export default function Notificaciones({ onModalChange }) {
                 ) : (
                   notificaciones.map((notif) => (
                     <div
-                      key={notif.id}
+                      key={notif.id_notificacion}
                       className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow-sm dark:hover:shadow-[#f2af1e]/10 transition"
                     >
                       <div className="flex justify-between items-start">
@@ -102,13 +153,15 @@ export default function Notificaciones({ onModalChange }) {
                             {notif.mensaje}
                           </p>
                           <span className="text-xs text-gray-400 dark:text-gray-500">
-                            {notif.fecha}
+                            {new Date(notif.fecha_envio).toLocaleString("es-PA", {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            })}
                           </span>
                         </div>
                         <button
-                          onClick={() => eliminarNotificacion(notif.id)}
+                          onClick={() => eliminarNotificacion(notif.id_notificacion)}
                           className="text-gray-400 hover:text-[#b71f4b] dark:hover:text-[#f2af1e] transition"
-                          title="Eliminar notificación"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -121,7 +174,7 @@ export default function Notificaciones({ onModalChange }) {
               {/* Botón eliminar todas */}
               {notificaciones.length > 0 && (
                 <button
-                  onClick={() => setNotificaciones([])}
+                  onClick={eliminarTodas}
                   className="mt-6 w-full py-3 bg-[#b71f4b] dark:bg-[#f2af1e] text-white dark:text-gray-900 rounded-lg text-sm font-medium hover:bg-[#a01744] dark:hover:bg-[#f2af1e]/80 transition"
                 >
                   Eliminar todas las notificaciones

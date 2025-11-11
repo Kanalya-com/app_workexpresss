@@ -156,7 +156,7 @@ export function TrackingResult({ data, error }) {
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6 sm:space-y-8 py-8 sm:py-12 px-4 animate-in slide-in-from-bottom-4 duration-700">
       {/* Fases visuales del tracking */}
-      <Card className="p-4 sm:p-6 lg:p-8 bg-linear-to-br from-white to-gray-50/50 dark:from-gray-800  dark:to-gray-900 shadow-xl border-0">
+      <Card className="p-4 sm:p-6 lg:p-8 bg-white dark:bg-[#040c13] shadow-xl border border-gray-100 dark:border-gray-800">
         <div className="text-center mb-6 sm:mb-8">
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-linear-to-r from-gray-800 to-gray-600 dark:text-white bg-clip-text text-transparent mb-2">
             Estado del Envío
@@ -298,7 +298,7 @@ export function TrackingResult({ data, error }) {
         </div>  
       </Card>
 
-      <Card className="p-4 sm:p-6 lg:p-8 bg-linear-to-br from-white to-gray-50/30 dark:from-gray-800  dark:to-gray-900 shadow-xl border-0">
+      <Card className="p-4 sm:p-6 lg:p-8 bg-white dark:bg-[#040c13] shadow-xl border border-gray-100 dark:border-gray-800">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div className="flex-1">
             <p className="text-xs sm:text-sm text-gray-500 mb-2 font-medium">Número de Rastreo</p>

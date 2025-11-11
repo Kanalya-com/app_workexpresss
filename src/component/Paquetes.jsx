@@ -66,16 +66,17 @@ export default function Paquetes() {
 //   }
 
   return (
-    <div className="bg-linear-to-br from-[#f2af1e] via-[#ed933e] to-[#ea6342] text-white rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-800 transition-colors">
+    <div className="bg-linear-to-br from-[#d30046] via-orange-500 to-[#db2fb2] text-white rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-800 transition-colors">
       {/* Encabezado */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-2">
-        <Package className="text-white"/>
+          <Plane size={24} />
+        
         <h2 className="text-lg font-semibold text-gray-100 ">
           Tus Paquetes
         </h2>
         </div>
-        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-3 py-1 rounded-lg">
+        <span className="text-sm sm:text-[16px] bg-white/20 text-white font-semibold px-3 py-1 rounded-full">
           {paquetes.length} paquete{paquetes.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -88,7 +89,7 @@ export default function Paquetes() {
               ? "grid-cols-1"
               : paquetes.length === 2
               ? "sm:grid-cols-2"
-              : "sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+              : "sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3"
           }`}
         >
           {paquetes.map((p) => (
@@ -99,32 +100,34 @@ export default function Paquetes() {
               {/* Tracking */}
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30">
-                  <Plane size={18} />
+                  <Package className="text-white"/>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold  text-gray-100 truncate max-w-[140px]">
+                  <p className="text-xs" >Número de paquete</p>
+                  <p className="text-sm font-semibold  text-white truncate max-w-[140px]">
                     {p.tracking_id || "—"}
                   </p>
-                  <p className="text-xs text-gray-100">
+                  {/* <p className="text-xs text-gray-100">
                     {p.nombre_en_etiqueta || "Sin etiqueta"}
-                  </p>
+                  </p> */}
                 </div>
               </div>
 
               {/* Estado */}
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 font-semibold mb-5">
                 <MapPin className="w-4 h-4 text-gray-100" />
-                <p className="text-sm text-gray-100 capitalize">
+                <p className="bg-white/20 py-1 px-2 rounded-full text-sm text-gray-100 capitalize">
                   {p.estado || "En tránsito"}
                 </p>
-              </div>
-
-              {/* Fecha */}
-              <p className="text-xs text-gray-100 mb-3">
+                <p className="text-xs text-gray-100">
                 {p.created_at
                   ? new Date(p.created_at).toLocaleDateString()
                   : "—"}
               </p>
+              </div>
+
+              {/* Fecha */}
+              
 
               {/* Botón */}
               <button
@@ -140,9 +143,9 @@ export default function Paquetes() {
         <div className="flex flex-col items-center justify-center py-10 text-center">
           <PackageSearch
             size={40}
-            className="text-gray-400 dark:text-gray-600 mb-3"
+            className="text-white mb-3"
           />
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-white">
             Aún no tienes paquetes vinculados a tu cuenta.
           </p>
         </div>

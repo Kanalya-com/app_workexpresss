@@ -54,7 +54,7 @@ export default function ModalAgregarPaquete({ visible, onClose, paquete, cliente
         <div className="p-5 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
           <button
             onClick={onConfirm}
-            className="flex-1 bg-[#b71f4b] hover:bg-[#a01744] text-white font-semibold rounded-xl py-3 flex items-center justify-center gap-2 transition-all"
+            className="flex-1 bg-[#b71f4b] hover:bg-[#a01744]  text-white font-semibold rounded-xl py-3 flex items-center justify-center gap-2 transition-all"
           >
             <CheckCircle2 className="w-5 h-5" />
             <span>Agregar a mi cuenta</span>

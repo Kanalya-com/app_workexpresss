@@ -42,7 +42,7 @@ export function TrackingSearch({ onSearch, isLoading }) {
 
     const id = trackingId.trim().toUpperCase();
     onSearch(id);
-    logTrackingSilently(id);
+    // logTrackingSilently(id);
   };
 
   const handleInputChange = (e) => {
@@ -81,7 +81,7 @@ export function TrackingSearch({ onSearch, isLoading }) {
               ${
                 isLoading || inputError
                   ? "bg-gray-400 dark:bg-gray-700 cursor-not-allowed shadow-none transform-none"
-                  : "bg-[#b71f4b] dark:bg-[#f2af1e] hover:bg-[#a01744] dark:hover:bg-[#e6c565] text-white dark:text-gray-900"
+                  : "bg-linear-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold"
               }`}
           >
             {isLoading ? (
