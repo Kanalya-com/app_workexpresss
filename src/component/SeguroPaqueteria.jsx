@@ -79,7 +79,7 @@ export default function SeguroPaqueteria({ clienteId, precio = 0.99, onPopup }) 
 
   return (
     <div
-      className={`relative rounded-2xl p-5 shadow-md overflow-hidden transition-all border-2 
+      className={`relative rounded-2xl p-5 shadow-md overflow-hidden transition-all border-2 w-full sm:min-w-[300px] 
         ${activo
           ? "border-orange-500 dark:border-pink-500"
           : "border-gray-300 dark:border-gray-700"

@@ -88,64 +88,62 @@ export default function Perfil() {
 
   if (loading) return <Loading />;
 
-return (
-  <div className="flex min-h-screen bg-gray-50 dark:bg-[#01060c] transition-colors duration-300">
-    <Sidebar />
+  return (
+    <div className="flex min-h-screen bg-gray-50 dark:bg-[#01060c] transition-colors duration-300">
+      <Sidebar />
 
-    <main className="flex-1 ml-0 md:ml-20 pb-20 md:pb-0">
-      {/* Header */}
-      <div className="bg-white dark:bg-[#01060c] text-gray-900 dark:text-gray-100 p-6 flex items-center justify-start shadow-md dark:shadow-none">
-        <h1 className="text-2xl font-semibold tracking-wide">Mi Perfil</h1>
-      </div>
+      <main className="flex-1 ml-0 md:ml-20 pb-20 md:pb-0 bg-gray-50 dark:bg-[#01060c]">
+        {/* Header */}
+        <div className="bg-white dark:bg-[#01060c] text-gray-900 dark:text-gray-100 p-6 flex items-center justify-start shadow-md dark:shadow-none">
+          <h1 className="text-2xl font-semibold tracking-wide">Mi Perfil</h1>
+        </div>
 
-      {/* Tabs */}
-      <div className="flex justify-around bg-white dark:bg-[#01060c] border-b border-gray-100 dark:border-gray-700 transition-colors duration-300">
-        {[
-          { key: "personal", label: "Personal", icon: <IdCard size={16} /> },
-          { key: "seguridad", label: "Seguridad", icon: <Shield size={16} /> },
-        ].map((item) => (
-          <button
-            key={item.key}
-            onClick={() => setTab(item.key)}
-            className={`flex items-center justify-center gap-2 flex-1 py-3 text-sm font-medium border-b-2 transition-all duration-200 ${
-              tab === item.key
+        {/* Tabs */}
+        <div className="flex justify-around bg-white dark:bg-[#01060c] border-b border-gray-100 dark:border-gray-700 transition-colors duration-300">
+          {[
+            { key: "personal", label: "Personal", icon: <IdCard size={16} /> },
+            { key: "seguridad", label: "Seguridad", icon: <Shield size={16} /> },
+          ].map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setTab(item.key)}
+              className={`flex items-center justify-center gap-2 flex-1 py-3 text-sm font-medium border-b-2 transition-all duration-200 ${tab === item.key
                 ? "text-orange-500 border-orange-500 dark:text-pink-500 dark:border-pink-500"
                 : "text-gray-500 dark:text-gray-400 border-transparent hover:text-[#f2af1e]/80"
-            }`}
-          >
-            <span
-              className={`transition-transform ${
-                tab === item.key
+                }`}
+            >
+              <span
+                className={`transition-transform ${tab === item.key
                   ? "scale-110 dark:text-pink-500"
                   : "text-gray-400 dark:text-gray-500"
-              }`}
-            >
-              {item.icon}
-            </span>
-            {item.label}
-          </button>
-        ))}
-      </div>
+                  }`}
+              >
+                {item.icon}
+              </span>
+              {item.label}
+            </button>
+          ))}
+        </div>
 
-      {/* Contenido */}
-      <div className="p-4 md:p-8 w-full bg-gray-50 dark:bg-[#01060c] transition-colors duration-300">
-        {tab === "personal" && (
-          <Personal
-            cliente={cliente}
-            editMode={editMode}
-            setEditMode={setEditMode}
-            saving={saving}
-            handleSave={handleSave}
-            setCliente={setCliente}
-          />
-        )}
-        {tab === "seguridad" && <Seguridad />}
-      </div>
-    </main>
+        {/* Contenido */}
+        <div className="p-4 md:p-8 w-full bg-gray-50 dark:bg-[#01060c] transition-colors duration-300">
+          {tab === "personal" && (
+            <Personal
+              cliente={cliente}
+              editMode={editMode}
+              setEditMode={setEditMode}
+              saving={saving}
+              handleSave={handleSave}
+              setCliente={setCliente}
+            />
+          )}
+          {tab === "seguridad" && <Seguridad />}
+        </div>
+      </main>
 
-    <BottomNav />
-  </div>
-);
+      <BottomNav />
+    </div>
+  );
 
 
 }
@@ -182,9 +180,8 @@ function Personal({ cliente, editMode, setEditMode, saving, handleSave, setClien
   return (
     <div className="flex flex-col md:flex-row md:items-start md:justify-center gap-8 md:gap-12 px-2 md:px-6">
       {/* 🔹 Plan actual */}
-      <div className="w-full flex flex-col lg:flex-row md:items-start md:justify-between gap-4">
-        {/* 🔹 Plan y Sucursal */}
-        <div className="w-full">
+      <div className="w-full flex flex-col lg:flex-row md:items-start md:justify-between gap-4 md:gap-6">
+        <div className="w-full md:w-1/2">
           <Planes
             id_plan={cliente.id_plan}
             clienteId={cliente.id_cliente}
@@ -192,27 +189,22 @@ function Personal({ cliente, editMode, setEditMode, saving, handleSave, setClien
           />
         </div>
 
-        {/* 🔹 Seguro de Paquetería */}
-        <div className="w-full">
-          <SeguroPaqueteria clienteId={cliente.id_cliente} onPopup={setPopup} />
+        <div className="w-full md:w-1/2">
+          <SeguroPaqueteria
+            clienteId={cliente.id_cliente}
+            onPopup={setPopup}
+          />
         </div>
-
-        {/* 🔔 Popup de confirmación */}
-        <Popup
-          show={popup.show}
-          onClose={() => setPopup({ show: false })}
-          message={popup.message}
-          type={popup.success ? "success" : "error"}
-          duration={2500}
-        />
       </div>
 
 
+
       {/* 🔹 Información personal */}
-     <div className="md:w-[50%] w-full bg-white dark:bg-[#040c13] rounded-2xl p-8 shadow-md space-y-5 border border-gray-100 dark:border-gray-800">
-  <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
-    Información Personal
-  </h3>
+      <div className="w-full max-w-md mx-auto bg-white dark:bg-[#040c13] rounded-2xl p-5 md:p-6 shadow-md space-y-4 border border-gray-100 dark:border-gray-800">
+
+        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+          Información Personal
+        </h3>
 
 
         <Info
@@ -220,14 +212,15 @@ function Personal({ cliente, editMode, setEditMode, saving, handleSave, setClien
           value={`${cliente.nombre} ${cliente.apellido}`}
           icon={<User />}
         />
-        <EditableInfo
+        {/* <EditableInfo
           label="Correo"
           value={cliente.email || ""}
           onChange={(v) => setCliente({ ...cliente, email: v })}
           icon={<Mail />}
           editable={editMode}
-        />
-        {/* <Info label="Cédula" value={cliente.cedula} icon={<IdCard />} /> */}
+           
+        /> */}
+
         <EditableInfo
           label="Cédula"
           value={cliente.cedula || ""}
@@ -251,7 +244,7 @@ function Personal({ cliente, editMode, setEditMode, saving, handleSave, setClien
           editable={editMode}
         />
 
-        {/* Botón de edición */}
+
         <div className="flex justify-end pt-4">
           {editMode ? (
             <button
@@ -271,7 +264,7 @@ function Personal({ cliente, editMode, setEditMode, saving, handleSave, setClien
           )}
         </div>
       </div>
-          
+
       {/* Popup de éxito o error */}
       <Popup
         show={popupVisible}
@@ -435,20 +428,19 @@ export function Info({ label, value, icon }) {
 export function EditableInfo({ label, value, onChange, icon, editable }) {
   return (
     <div
-      className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 ${
-        editable
+      className={`flex  sm:flex-row items-start sm:items-center gap-2 sm:gap-3 rounded-xl px-4 py-3 transition-all duration-200 ${editable
           ? "border-2 border-orange-500/30 dark:border-pink-500/30 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-orange-500/30 dark:focus-within:ring-pink-500/30"
           : "border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900"
-      }`}
+        }`}
     >
+
       <div className="text-orange-500 dark:text-pink-500">{icon}</div>
       <div className="flex flex-col text-gray-700 dark:text-gray-200 w-full">
         <span
-          className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${
-            editable
-              ? "text-orange-500 dark:text-pink-500"
-              : "text-gray-500 dark:text-gray-400"
-          }`}
+          className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${editable
+            ? "text-orange-500 dark:text-pink-500"
+            : "text-gray-500 dark:text-gray-400"
+            }`}
         >
           {label}
         </span>
@@ -457,6 +449,7 @@ export function EditableInfo({ label, value, onChange, icon, editable }) {
           <input
             type="text"
             value={value}
+           
             onChange={(e) => onChange(e.target.value)}
             className="bg-transparent outline-none text-sm w-full text-gray-900 dark:text-gray-100"
           />
