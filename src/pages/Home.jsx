@@ -166,7 +166,9 @@ export default function Home() {
                 <Paquetes />
               </div>
               <div className="lg:col-span-1">
-                <Casillero />
+                <Casillero cliente={cliente} />
+
+
               </div>
             </div>
         

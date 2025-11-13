@@ -1,7 +1,7 @@
 import MetricCard from "./MetricCard";
 import { DollarSign, CheckCircle, Clock, FileText } from "lucide-react";
 
-export default function FacturasResumen({ cantidadPagadas, cantidadPendiente, total }) {
+export default function FacturasResumen({ cantidadPagadas, cantidadPendiente, total, totalPendiente }) {
   return (
     <section className="mt-6">
       <h3 className="text-lg font-semibold text-[#01060c] dark:text-white mb-4">
@@ -18,7 +18,7 @@ export default function FacturasResumen({ cantidadPagadas, cantidadPendiente, to
         <MetricCard
           title="Facturas Pendientes"
           value={cantidadPendiente}
-          subtitle="$125.00"
+          subtitle={totalPendiente}
           icon={Clock}
         />
         <MetricCard

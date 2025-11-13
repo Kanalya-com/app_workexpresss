@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect , useRef} from "react";
 import {
   ClipboardCopy,
   Plane,
@@ -26,27 +26,30 @@ export default function Casillero({ onModalChange, cliente }) {
   const showPopup = (message, type = "success") => setPopupData({ show: true, message, type });
   const handleClosePopup = () => setPopupData((prev) => ({ ...prev, show: false }));
 
-  // 🔹 Bloquear scroll completamente cuando el modal está activo
+  const scrollYRef = useRef(0);
+
   useEffect(() => {
     if (onModalChange) onModalChange(showModal);
 
     if (showModal) {
-      const scrollY = window.scrollY;
+      scrollYRef.current = window.scrollY;  // guardar posición real
+
       document.body.style.position = "fixed";
-      document.body.style.top = `-${scrollY}px`;
+      document.body.style.top = `-${scrollYRef.current}px`;
       document.body.style.left = "0";
       document.body.style.right = "0";
       document.body.style.overflow = "hidden";
-      document.documentElement.style.overflow = "hidden"; // bloquea también html
+      document.documentElement.style.overflow = "hidden";
     } else {
-      const scrollY = document.body.style.top;
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.left = "";
       document.body.style.right = "";
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
-      window.scrollTo(0, parseInt(scrollY || "0") * -1); // restaura posición original
+
+      // restaurar scroll guardado
+      window.scrollTo(0, scrollYRef.current);
     }
 
     return () => {
@@ -58,6 +61,7 @@ export default function Casillero({ onModalChange, cliente }) {
       document.documentElement.style.overflow = "";
     };
   }, [showModal, onModalChange]);
+
 
 
   // 🔹 Cargar casilleros
@@ -82,7 +86,7 @@ export default function Casillero({ onModalChange, cliente }) {
         console.error("Error cargando casilleros:", error.message);
         return;
       }
-      
+
       const formatted = data.map((c) => ({
         id: c.id_casillero,
         tipo_envio: c.tb_tipo_envio?.nombre || "Desconocido",
@@ -136,10 +140,15 @@ export default function Casillero({ onModalChange, cliente }) {
   };
 
   const getDireccion2 = () => {
-    // 🔸 Si el país es China, mostrar dirección2 del registro de BD
+    // Si el país es China → usar dirección2 del registro
     if (activeCountry?.toLowerCase() === "china" && selectedItem?.direccion2) {
       return selectedItem.direccion2;
     }
+
+    // Si no hay cliente, fallback básico
+    if (!cliente) return "Usuario ST";
+
+    const nombreCompleto = `${cliente.nombre} ${cliente.apellido}`;
 
     const sucursal = (cliente?.sucursal || "")
       .toLowerCase()
@@ -150,8 +159,14 @@ export default function Casillero({ onModalChange, cliente }) {
     if (sucursal.includes("chitre")) sufijo = "STC";
     else if (sucursal.includes("panama")) sufijo = "STP";
 
-    return activeTab === "Marítimo" ? `${sufijo} - Marítimo` : sufijo;
+    // Si es marítimo, agrega el sufijo especial
+    const finalSufijo =
+      activeTab === "Marítimo" ? `${sufijo} - Marítimo` : sufijo;
+
+    // 🚀 Aquí está el cambio que pediste:
+    return `${nombreCompleto} ${finalSufijo}`;
   };
+
 
 
   const handleCopyAll = (data) => {
@@ -227,7 +242,7 @@ WorkExpress - Envíos confiables
                         const seleccionado = casilleros.find(
                           (c) => c.pais === pais && c.tipo_envio === tipo
                         );
-                        
+
 
                         setSelectedItem(seleccionado); // 🔹 Guardamos el objeto correcto
                         setActiveCountry(pais);
@@ -252,86 +267,86 @@ WorkExpress - Envíos confiables
 
         {/* Modal */}
         <AnimatePresence>
-  {showModal && (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={() => setShowModal(false)}
-    >
-      <motion.div
-        className="bg-white dark:bg-[#01060c] w-[92%] max-w-md rounded-3xl shadow-xl border border-gray-100 dark:border-[#01060c] relative overflow-hidden max-h-[85vh] flex flex-col"
-        initial={{ y: 50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 50, opacity: 0 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex justify-between items-start px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-1">
-            {activeTab === "Aéreo" ? (
-              <Plane className="w-5 h-5 text-[#d30046]" />
-            ) : (
-              <Ship className="w-5 h-5 text-[#d30046]" />
-            )}
-            Casillero {activeCountry} - {activeTab}
-          </h3>
-          <button
-            onClick={() => {
-              setSelectedItem(null);
-              setShowModal(false);
-            }}
-            className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Contenido */}
-        <div className="overflow-y-auto no-scrollbar flex-1 px-6 py-4">
-          {selectedItem ? (
-            <>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Información completa del casillero
-              </p>
-              <div className="space-y-0">
-                <InfoRow icon={User} label="Nombre Completo" value={getNombreCasillero()} color="bg-blue-500" />
-                <InfoRow icon={MapPin} label="Dirección" value={selectedItem.direccion1} color="bg-red-500" />
-                <InfoRow icon={MapPin} label="Dirección 2" value={getDireccion2()} color="bg-red-500" />
-                <InfoRow icon={Landmark} label="Ciudad" value={selectedItem.ciudad} color="bg-purple-500" />
-                <InfoRow icon={Flag} label="Estado" value={selectedItem.estado} color="bg-cyan-500" />
-                <InfoRow icon={Hash} label="Código Postal" value={selectedItem.codigo_postal} color="bg-orange-500" />
-                <InfoRow icon={Globe} label="País" value={selectedItem.pais} color="bg-cyan-500" />
-                <InfoRow icon={Phone} label="Teléfono" value={selectedItem.telefono} color="bg-orange-500" />
-              </div>
-            </>
-          ) : (
-            <p className="text-center text-gray-500 dark:text-gray-400">
-              No hay datos disponibles.
-            </p>
-          )}
-        </div>
-
-        {/* Botón copiar */}
-        {item && (
-          <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-[#01060c]">
-            <button
-              onClick={() => handleCopyAll(item)}
-              className="w-full flex items-center justify-center gap-2 bg-linear-to-br from-[#d30046] via-orange-500 to-[#db2fb2] text-white py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
+          {showModal && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowModal(false)}
             >
-              <ClipboardCopy className="w-4 h-4" />
-              Copiar Información
-            </button>
-          </div>
-        )}
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
+              <motion.div
+                className="bg-white dark:bg-[#01060c] w-[92%] max-w-md rounded-3xl shadow-xl border border-gray-100 dark:border-[#01060c] relative overflow-hidden max-h-[85vh] flex flex-col"
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 50, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex justify-between items-start px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-1">
+                    {activeTab === "Aéreo" ? (
+                      <Plane className="w-5 h-5 text-[#d30046]" />
+                    ) : (
+                      <Ship className="w-5 h-5 text-[#d30046]" />
+                    )}
+                    Casillero {activeCountry} - {activeTab}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setSelectedItem(null);
+                      setShowModal(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
 
-{/* Estilo para ocultar scrollbar */}
-<style>{`
+                {/* Contenido */}
+                <div className="overflow-y-auto no-scrollbar flex-1 px-6 py-4">
+                  {selectedItem ? (
+                    <>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        Información completa del casillero
+                      </p>
+                      <div className="space-y-0">
+                        <InfoRow icon={User} label="Nombre Completo" value={getNombreCasillero()} color="bg-blue-500" />
+                        <InfoRow icon={MapPin} label="Dirección" value={selectedItem.direccion1} color="bg-red-500" />
+                        <InfoRow icon={MapPin} label="Dirección 2" value={getDireccion2()} color="bg-red-500" />
+                        <InfoRow icon={Landmark} label="Ciudad" value={selectedItem.ciudad} color="bg-purple-500" />
+                        <InfoRow icon={Flag} label="Estado" value={selectedItem.estado} color="bg-cyan-500" />
+                        <InfoRow icon={Hash} label="Código Postal" value={selectedItem.codigo_postal} color="bg-orange-500" />
+                        <InfoRow icon={Globe} label="País" value={selectedItem.pais} color="bg-cyan-500" />
+                        <InfoRow icon={Phone} label="Teléfono" value={selectedItem.telefono} color="bg-orange-500" />
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-center text-gray-500 dark:text-gray-400">
+                      No hay datos disponibles.
+                    </p>
+                  )}
+                </div>
+
+                {/* Botón copiar */}
+                {item && (
+                  <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-[#01060c]">
+                    <button
+                      onClick={() => handleCopyAll(item)}
+                      className="w-full flex items-center justify-center gap-2 bg-linear-to-br from-[#d30046] via-orange-500 to-[#db2fb2] text-white py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
+                    >
+                      <ClipboardCopy className="w-4 h-4" />
+                      Copiar Información
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Estilo para ocultar scrollbar */}
+        <style>{`
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
@@ -344,5 +359,5 @@ WorkExpress - Envíos confiables
       </div>
     </>
   );
-  
+
 }

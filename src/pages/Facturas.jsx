@@ -5,6 +5,7 @@ import FacturaCard from "../component/FacturaCard";
 import { CreditCard, CheckCircle2, ArrowLeft, X } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import FacturasResumen from "../component/FacturasResumen";
+import DetalleFactura from "../component/DetalleFactura";
 export default function Facturas({ cliente }) {
   const [tab, setTab] = useState("pendientes");
   const [selected, setSelected] = useState([]);
@@ -13,15 +14,70 @@ export default function Facturas({ cliente }) {
   const [facturas, setFacturas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [esPagoParcial, setEsPagoParcial] = useState(false);
-
-
+  const [detalleVisible, setDetalleVisible] = useState(false);
+  const [facturaDetalle, setFacturaDetalle] = useState(null);
+  const [totalPendiente, setTotalPendiente] = useState(0);
   // 🔹 Mostrar / ocultar BottomNav según vista previa
   useEffect(() => {
-    setShowBottom(!preview);
-  }, [preview]);
+    setShowBottom(!preview && !detalleVisible);
+  }, [preview, detalleVisible]);
+  useEffect(() => {
+    const fetchPendientes = async () => {
+      const { data, error } = await supabase
+        .from("tb_factura")
+        .select("total, estado");
+
+      if (error) {
+        console.error("Error cargando facturas:", error);
+        return;
+      }
+
+      calcularTotalPendiente(data);
+    };
+
+    const calcularTotalPendiente = (rows) => {
+      const suma = rows
+        .filter((f) => f.estado === "pendiente")
+        .reduce((acc, f) => acc + Number(f.total || 0), 0);
+
+      setTotalPendiente(suma);
+    };
+
+    // 🔹 1. Cargar datos al inicio
+    fetchPendientes();
+
+    // 🔹 2. Suscribirse a cambios en tiempo real (INSERT, UPDATE, DELETE)
+    const channel = supabase
+      .channel("realtime_facturas")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",          // escucha todo (INSERT, UPDATE, DELETE)
+          schema: "public",
+          table: "tb_factura",
+        },
+        async (payload) => {
+          console.log("Cambio detectado:", payload);
+
+          // Recalcular siempre desde la BD para garantizar consistencia
+          const { data } = await supabase
+            .from("tb_factura")
+            .select("total, estado");
+
+          calcularTotalPendiente(data);
+        }
+      )
+      .subscribe();
+
+    // 🔹 Limpieza
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // 🔹 Bloquear scroll cuando el modal esté abierto
   useEffect(() => {
-    if (preview) {
+    if (preview || detalleVisible) {
       document.body.style.overflow = "hidden"; // ❌ Bloquea el scroll
     } else {
       document.body.style.overflow = ""; // ✅ Lo restaura
@@ -31,7 +87,7 @@ export default function Facturas({ cliente }) {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [preview]);
+  }, [preview, detalleVisible]);
   // 🔹 Cargar facturas desde Supabase
   useEffect(() => {
     const fetchFacturas = async () => {
@@ -136,6 +192,7 @@ export default function Facturas({ cliente }) {
           cantidadPagadas={pagadas.length}
           cantidadPendiente={pendientes.length}
           total={facturas.length}
+          totalPendiente={`$${totalPendiente.toFixed(2)}`}
         />
 
         {/* Tabs */}
@@ -175,85 +232,35 @@ export default function Facturas({ cliente }) {
           <p className="text-gray-500 dark:text-gray-400">Cargando facturas...</p>
         ) : (
           <>
+            {/* TAB Pendientes */}
             {tab === "pendientes" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {pendientes.map((f) => (
-                    <div key={f.id_factura} onClick={() => toggleSelect(f.numero)}>
-                      <FacturaCard
-                        codigo={f.numero}
-                        tracking={f.id_lote_facturacion?.substring(0, 8) || "—"}
-                        monto={f.total?.toFixed(2)}
-                        estado={f.estado}
-                        fecha={f.created_at.slice(0, 10).split("-").reverse().join(" / ")}
-                        onPayClick={(codigo) => {
-                          setSelected([codigo]);
-                          setEsPagoParcial(false);
-                          setPreview(true);
-                        }}
-                      />
-                    </div>
+                    <FacturaCard
+                      key={f.id_factura}
+                      codigo={f.numero}
+                      tracking={f.id_lote_facturacion?.substring(0, 8) || "—"}
+                      monto={f.total?.toFixed(2)}
+                      estado={f.estado}
+                      fecha={f.created_at.slice(0, 10).split("-").reverse().join(" / ")}
+                      onViewClick={() => {
+                        setFacturaDetalle(f);
+                        setDetalleVisible(true);
+
+                      }}
+                      onPayClick={(codigo) => {
+                        setSelected([codigo]);
+                        setEsPagoParcial(false);
+                        setPreview(true);
+                      }}
+                    />
                   ))}
                 </div>
-
-                {/* Resumen de pago */}
-                {selected.length > 1 && (
-                  <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-md border border-gray-100 dark:border-gray-700">
-                    <h3 className="font-semibold text-[#040c13] dark:text-white flex items-center gap-2 mb-3">
-                      Resumen de Pago
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                      Cantidad de facturas: {selected.length}
-                    </p>
-
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 mb-3">
-                      {pendientes
-                        .filter((f) => selected.includes(f.numero))
-                        .map((f) => (
-                          <div
-                            key={f.numero}
-                            className="flex flex-col text-sm text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700 last:border-none py-1"
-                          >
-                            <span className="w-full flex justify-between">Factura<span>${f.total?.toFixed(2)}</span> </span>
-                            <span>{f.numero}</span>
-                          </div>
-                        ))}
-                    </div>
-
-                    <div className="flex justify-between font-semibold text-gray-700 dark:text-gray-200 mb-4">
-                      <span>Total a Pagar:</span>
-                      <span className="text-orange-500 dark:text-pink-500">${total}</span>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                      <button
-                        onClick={() => {
-                          setEsPagoParcial(false);
-                          setPreview(true);
-                        }}
-                        className="flex-1 text-white rounded-xl py-3 font-medium text-sm bg-linear-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600   flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition"
-                      >
-                        <CreditCard className="w-4 h-4" />
-                        Pagar Total
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setEsPagoParcial(true);
-                          setPreview(true);
-                        }}
-                        className="flex-1 border border-orange-500 dark:border-pink-500 text-orange-500 dark:text-pink-500 py-3 rounded-xl text-sm font-medium hover:bg-[#b71f4b]/10 dark:hover:bg-[#f2af1e]/20 flex items-center justify-center gap-2 transition"
-                      >
-                        <CreditCard className="w-4 h-4" />
-                        Pago Parcial
-                      </button>
-                    </div>
-
-                  </div>
-                )}
               </div>
             )}
 
+            {/* TAB Pagadas */}
             {tab === "pagadas" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {pagadas.map((f) => (
@@ -264,10 +271,16 @@ export default function Facturas({ cliente }) {
                     monto={f.total?.toFixed(2)}
                     estado={f.estado}
                     fecha={new Date(f.created_at).toLocaleDateString("es-PA")}
+                    onViewClick={() => {
+                      setFacturaDetalle(f);
+                      setDetalleVisible(true);
+                    }}
                   />
                 ))}
               </div>
             )}
+
+            {/* TAB Parcial */}
             {tab === "parcial" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {parcial.map((f) => (
@@ -278,11 +291,27 @@ export default function Facturas({ cliente }) {
                     monto={f.total?.toFixed(2)}
                     estado={f.estado}
                     fecha={new Date(f.created_at).toLocaleDateString("es-PA")}
+                    onViewClick={() => {
+                      setFacturaDetalle(f);
+                      setDetalleVisible(true);
+                    }}
                   />
                 ))}
               </div>
             )}
           </>
+        )}
+
+        {/* 🔹 Modal de Detalle */}
+        {detalleVisible && facturaDetalle && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center z-50 ">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-50">
+              <div className="relative w-full max-w-lg max-h-[90vh] sm:max-h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent rounded-2xl">
+                <DetalleFactura factura={facturaDetalle} onClose={() => setDetalleVisible(false)} />
+              </div>
+            </div>
+
+          </div>
         )}
 
         {preview && (
@@ -482,7 +511,7 @@ export default function Facturas({ cliente }) {
                       </h3>
                     </div>
 
-                    <p className="text-sm text-gray-500 dark:text-gray-400 text-start mb-5">
+                    <div className="text-sm text-gray-500 dark:text-gray-400 text-start mb-5">
                       <p className="text-sm text-gray-500 dark:text-gray-400 text-start mb-5">
                         Factura:{" "}
                         {pendientes
@@ -490,8 +519,8 @@ export default function Facturas({ cliente }) {
                           .map((f) => f.numero)
                           .join(", ")}
                       </p>
+                    </div>
 
-                    </p>
 
                     <div className="flex flex-col bg-linear-to-r from-orange-500 to-pink-500 rounded-2xl p-4 text-white">
                       <span className="text-sm opacity-90">Total a Pagar</span>
@@ -581,6 +610,6 @@ export default function Facturas({ cliente }) {
       </main>
 
       {showBottom && <BottomNav />}
-    </div>
+    </div >
   );
 }

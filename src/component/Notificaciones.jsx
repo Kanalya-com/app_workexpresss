@@ -9,7 +9,7 @@ export default function Notificaciones({ cliente, onModalChange }) {
 
   // 🔹 Cargar notificaciones al inicio
   useEffect(() => {
-    console.log("🧠 Cliente recibido:", cliente);
+    
     const fetchNotificaciones = async () => {
       if (!cliente?.id_cliente) return;
       const { data, error } = await supabase
@@ -17,7 +17,7 @@ export default function Notificaciones({ cliente, onModalChange }) {
         .select("*")
         .eq("id_cliente", cliente.id_cliente)
         .order("fecha_envio", { ascending: false });
-      console.log(data)
+      
       if (error) console.error("❌ Error cargando notificaciones:", error.message);
       else setNotificaciones(data || []);
     };

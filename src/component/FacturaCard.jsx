@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Calendar, Eye, CreditCard } from "lucide-react";
 
-export default function FacturaCard({ codigo, tracking, monto, estado, fecha, onPayClick }) {
+export default function FacturaCard({ codigo, tracking, monto, estado, fecha, onPayClick, onViewClick }) {
   const [isSelected, setIsSelected] = useState(false);
 
   const estadoEstilos = {
@@ -39,13 +39,12 @@ export default function FacturaCard({ codigo, tracking, monto, estado, fecha, on
             className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${colorEstado}`}
           >
             <span
-              className={`w-2 h-2 rounded-full ${
-                esPagado
+              className={`w-2 h-2 rounded-full ${esPagado
                   ? "bg-green-500"
                   : estado?.toLowerCase() === "vencida"
-                  ? "bg-red-500"
-                  : "bg-amber-500"
-              }`}
+                    ? "bg-red-500"
+                    : "bg-amber-500"
+                }`}
             ></span>
             {estado.charAt(0).toUpperCase() + estado.slice(1)}
           </span>
@@ -68,6 +67,10 @@ export default function FacturaCard({ codigo, tracking, monto, estado, fecha, on
       <div className="flex gap-3 pt-2 mt-4">
         {/* Botón Ver */}
         <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onViewClick) onViewClick(); 
+          }}
           className="flex items-center justify-center gap-2 flex-1 border border-gray-300 text-gray-800 dark:text-gray-200 rounded-xl py-2 font-medium text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition"
         >
           <Eye className="w-4 h-4" />
