@@ -119,8 +119,8 @@ export default function Notificaciones({ cliente, onModalChange }) {
               {/* Header */}
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-[#b71f4b] dark:text-[#f2af1e]" />
-                  <h3 className="text-lg font-semibold text-[#b71f4b] dark:text-[#f2af1e]">
+                  <Bell className="w-5 h-5 text-orange-500 dark:text-pink-500" />
+                  <h3 className="text-lg font-semibold text-orange-500 dark:text-pink-500">
                     Bandeja de Notificaciones
                   </h3>
                 </div>
@@ -175,7 +175,7 @@ export default function Notificaciones({ cliente, onModalChange }) {
               {notificaciones.length > 0 && (
                 <button
                   onClick={eliminarTodas}
-                  className="mt-6 w-full py-3 bg-[#b71f4b] dark:bg-[#f2af1e] text-white dark:text-gray-900 rounded-lg text-sm font-medium hover:bg-[#a01744] dark:hover:bg-[#f2af1e]/80 transition"
+                  className="mt-6 w-full py-3 bg-linear-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white  rounded-lg text-sm font-medium transition"
                 >
                   Eliminar todas las notificaciones
                 </button>

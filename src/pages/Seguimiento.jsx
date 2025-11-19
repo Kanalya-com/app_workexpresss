@@ -9,7 +9,17 @@ import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import Popup from "../component/Popup";
 import { useTheme } from "../component/ThemeProvider"; // 👈 agregado
+const mapEstado = (estado) => {
+  if (!estado) return "Pendiente";
 
+  const st = estado.toLowerCase();
+
+  if (st.includes("transit") || st.includes("tránsito")) return "En tránsito";
+  if (st.includes("received")) return "Bodega Miami";
+  if (st.includes("invoiced")) return "Facturado";
+
+  return estado; // si no matchea, devuelve el original
+};
 export default function Seguimiento() {
   const { user, loading } = useAuth();
   const { theme, toggleTheme } = useTheme(); // 👈 controla el tema global
@@ -33,7 +43,7 @@ export default function Seguimiento() {
   const [showModal, setShowModal] = useState(false);
   const [allowOpen, setAllowOpen] = useState(false);
   const [closing, setClosing] = useState(false);
-
+  
   // 🔹 Obtener datos del cliente
   useEffect(() => {
     const getUserData = async () => {

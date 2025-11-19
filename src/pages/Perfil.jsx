@@ -7,6 +7,8 @@ import Planes from "../component/Planes";
 import Popup from "../component/Popup";
 import SeguroPaqueteria from "../component/SeguroPaqueteria";
 import { useNavigate } from "react-router-dom";
+import { usePerfilStore } from "../store/perfilStore";
+
 import {
   User,
   Mail,
@@ -33,60 +35,37 @@ import {
 
 
 export default function Perfil() {
-  const [cliente, setCliente] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("personal");
   const [editMode, setEditMode] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   // 🔹 Obtener datos del usuario logueado
-  useEffect(() => {
-    const fetchPerfil = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+  const { 
+  cliente, 
+  loadingPerfil, 
+  cargarPerfil, 
+  guardarPerfil, 
+  savingPerfil 
+} = usePerfilStore();
 
-        const { data, error } = await supabase
-          .from("tb_cliente")
-          .select("*")
-          .eq("email", user.email)
-          .single();
+useEffect(() => {
+  cargarPerfil();
+}, []);
 
-        if (error) throw error;
-        setCliente(data);
-      } catch (err) {
-        console.error("Error al obtener perfil:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPerfil();
-  }, []);
 
   // 🔹 Guardar cambios
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from("tb_cliente")
-        .update({
-          telefono: cliente.telefono,
-          direccion: cliente.direccion,
-          cedula: cliente.cedula,
-          email: cliente.email
-        })
-        .eq("id_cliente", cliente.id_cliente);
+  const result = await guardarPerfil(cliente);
 
-      if (error) throw error;
-      setEditMode(false);
-    } catch (err) {
-      console.error("Error al guardar:", err);
-    } finally {
-      setSaving(false);
-    }
-  };
+  if (result.success) {
+    setEditMode(false);
+  } else {
+    console.error(result.error);
+  }
+};
 
-  if (loading) return <Loading />;
+
+  if (loadingPerfil) return <Loading />;
+
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-[#01060c] transition-colors duration-300">
@@ -128,13 +107,15 @@ export default function Perfil() {
         {/* Contenido */}
         <div className="p-4 md:p-8 w-full bg-gray-50 dark:bg-[#01060c] transition-colors duration-300">
           {tab === "personal" && (
-            <Personal
+           <Personal
               cliente={cliente}
               editMode={editMode}
               setEditMode={setEditMode}
-              saving={saving}
+              saving={savingPerfil}
               handleSave={handleSave}
-              setCliente={setCliente}
+              setCliente={(v) =>
+                usePerfilStore.setState({ cliente: { ...cliente, ...v } })
+              }
             />
           )}
           {tab === "seguridad" && <Seguridad />}
@@ -267,11 +248,12 @@ function Personal({ cliente, editMode, setEditMode, saving, handleSave, setClien
 
       {/* Popup de éxito o error */}
       <Popup
-        show={popupVisible}
-        onClose={() => setPopupVisible(false)}
-        message={popupMessage}
-        type={popupType}
+        show={popup.show}
+        onClose={() => setPopup({ ...popup, show: false })}
+        message={popup.message}
+        type={popup.success ? "success" : "error"}
       />
+
     </div>
   );
 
@@ -429,8 +411,8 @@ export function EditableInfo({ label, value, onChange, icon, editable }) {
   return (
     <div
       className={`flex  sm:flex-row items-start sm:items-center gap-2 sm:gap-3 rounded-xl px-4 py-3 transition-all duration-200 ${editable
-          ? "border-2 border-orange-500/30 dark:border-pink-500/30 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-orange-500/30 dark:focus-within:ring-pink-500/30"
-          : "border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900"
+        ? "border-2 border-orange-500/30 dark:border-pink-500/30 bg-white dark:bg-gray-800 shadow-sm focus-within:ring-2 focus-within:ring-orange-500/30 dark:focus-within:ring-pink-500/30"
+        : "border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900"
         }`}
     >
 
@@ -449,7 +431,7 @@ export function EditableInfo({ label, value, onChange, icon, editable }) {
           <input
             type="text"
             value={value}
-           
+
             onChange={(e) => onChange(e.target.value)}
             className="bg-transparent outline-none text-sm w-full text-gray-900 dark:text-gray-100"
           />

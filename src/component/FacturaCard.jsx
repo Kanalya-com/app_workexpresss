@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Calendar, Eye, CreditCard } from "lucide-react";
 
-export default function FacturaCard({ codigo, tracking, monto, estado, fecha, onPayClick, onViewClick }) {
-  const [isSelected, setIsSelected] = useState(false);
+export default function FacturaCard({ codigo, tracking, monto, estado, fecha, onPayClick, onViewClick, onToggleSelect , isSelected}) {
+
 
   const estadoEstilos = {
     pagado: "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-300",
@@ -17,7 +17,7 @@ export default function FacturaCard({ codigo, tracking, monto, estado, fecha, on
   return (
     <div
       onClick={() => {
-        if (!esPagado) setIsSelected(!isSelected); // 🚫 no se selecciona si está pagado
+        if (!esPagado) onToggleSelect(codigo);
       }}
       className={`
         flex flex-col justify-between
@@ -40,10 +40,10 @@ export default function FacturaCard({ codigo, tracking, monto, estado, fecha, on
           >
             <span
               className={`w-2 h-2 rounded-full ${esPagado
-                  ? "bg-green-500"
-                  : estado?.toLowerCase() === "vencida"
-                    ? "bg-red-500"
-                    : "bg-amber-500"
+                ? "bg-green-500"
+                : estado?.toLowerCase() === "vencida"
+                  ? "bg-red-500"
+                  : "bg-amber-500"
                 }`}
             ></span>
             {estado.charAt(0).toUpperCase() + estado.slice(1)}
@@ -69,7 +69,7 @@ export default function FacturaCard({ codigo, tracking, monto, estado, fecha, on
         <button
           onClick={(e) => {
             e.stopPropagation();
-            if (onViewClick) onViewClick(); 
+            if (onViewClick) onViewClick();
           }}
           className="flex items-center justify-center gap-2 flex-1 border border-gray-300 text-gray-800 dark:text-gray-200 rounded-xl py-2 font-medium text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition"
         >
@@ -83,6 +83,7 @@ export default function FacturaCard({ codigo, tracking, monto, estado, fecha, on
             onClick={(e) => {
               e.stopPropagation();
               onPayClick(codigo);
+
             }}
             className="flex items-center justify-center gap-2 flex-1 text-white rounded-xl py-2 font-medium text-sm bg-linear-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 transition"
           >

@@ -17,15 +17,19 @@ export default function Facturas({ cliente }) {
   const [detalleVisible, setDetalleVisible] = useState(false);
   const [facturaDetalle, setFacturaDetalle] = useState(null);
   const [totalPendiente, setTotalPendiente] = useState(0);
+  const [modalTipoPago, setModalTipoPago] = useState(false);
   // 🔹 Mostrar / ocultar BottomNav según vista previa
   useEffect(() => {
     setShowBottom(!preview && !detalleVisible);
   }, [preview, detalleVisible]);
   useEffect(() => {
+    if (!cliente?.id_cliente) return;
+
     const fetchPendientes = async () => {
       const { data, error } = await supabase
         .from("tb_factura")
-        .select("total, estado");
+        .select("total, estado")
+        .eq("id_cliente", cliente.id_cliente);  // ✅ FILTRAR POR CLIENTE
 
       if (error) {
         console.error("Error cargando facturas:", error);
@@ -37,47 +41,44 @@ export default function Facturas({ cliente }) {
 
     const calcularTotalPendiente = (rows) => {
       const suma = rows
-        .filter((f) => f.estado === "pendiente")
+        .filter((f) => f.estado?.toLowerCase() === "pendiente")
         .reduce((acc, f) => acc + Number(f.total || 0), 0);
 
-      setTotalPendiente(suma);
+      setTotalPendiente(suma); // Se pondrá a 0 si no hay
     };
 
-    // 🔹 1. Cargar datos al inicio
     fetchPendientes();
 
-    // 🔹 2. Suscribirse a cambios en tiempo real (INSERT, UPDATE, DELETE)
+    // 🔥 Realtime filtrado por cliente
     const channel = supabase
-      .channel("realtime_facturas")
+      .channel("realtime_facturas_cliente")
       .on(
         "postgres_changes",
         {
-          event: "*",          // escucha todo (INSERT, UPDATE, DELETE)
+          event: "*",
           schema: "public",
           table: "tb_factura",
+          filter: `id_cliente=eq.${cliente.id_cliente}`, // 🔥 FILTRAR AQUI TAMBIÉN
         },
-        async (payload) => {
-          console.log("Cambio detectado:", payload);
-
-          // Recalcular siempre desde la BD para garantizar consistencia
+        async () => {
           const { data } = await supabase
             .from("tb_factura")
-            .select("total, estado");
+            .select("total, estado")
+            .eq("id_cliente", cliente.id_cliente);
 
           calcularTotalPendiente(data);
         }
       )
       .subscribe();
 
-    // 🔹 Limpieza
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [cliente]);
 
   // 🔹 Bloquear scroll cuando el modal esté abierto
   useEffect(() => {
-    if (preview || detalleVisible) {
+    if (preview || detalleVisible || modalTipoPago) {
       document.body.style.overflow = "hidden"; // ❌ Bloquea el scroll
     } else {
       document.body.style.overflow = ""; // ✅ Lo restaura
@@ -87,7 +88,7 @@ export default function Facturas({ cliente }) {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [preview, detalleVisible]);
+  }, [preview, detalleVisible, modalTipoPago]);
   // 🔹 Cargar facturas desde Supabase
   useEffect(() => {
     const fetchFacturas = async () => {
@@ -111,7 +112,7 @@ export default function Facturas({ cliente }) {
 
     if (cliente?.id_cliente) fetchFacturas();
   }, [cliente]);
-  // 🧩 Escucha cambios en tiempo real en tb_factura
+  //  Escucha cambios en tiempo real en tb_factura
   useEffect(() => {
     if (!cliente?.id_cliente) return;
 
@@ -154,29 +155,107 @@ export default function Facturas({ cliente }) {
     };
   }, [cliente]);
 
-  // 🔹 Filtros por estado
+  //  Filtros por estado
   const pendientes = facturas.filter((f) => f.estado?.toUpperCase() === "PENDIENTE");
   const pagadas = facturas.filter((f) => f.estado?.toUpperCase() === "PAGADO");
   const parcial = facturas.filter((f) => f.estado?.toUpperCase() === "PARCIAL");
+  const fetchFacturaDetalle = async (idfactura) => {
+    const { data, error } = await supabase
+      .from("tb_factura")
+      .select(`
+    id_factura,
+    numero,
+    created_at,
+    total,
+    subtotal,
+    estado,
+    total_pagado,
+    total_restante,
+    estado_vencimiento,
+    tb_cliente (
+      nombre,
+      email,
+      seguro
+    ),
+    tb_lote_facturacion (
+      id_lote_facturacion,
+      created_at,
+      estado,
+      tb_paquetes (
+        id_paquetes,
+        tracking_id,
+        nombre_en_etiqueta,
+        correo_vinculado,
+        peso_real,
+        largo,
+        ancho,
+        altura,
+        peso_vol
+      )
+    )
+  `)
+      .eq("id_factura", idfactura)
+      .single();
 
-  // 🔹 Selección múltiple
-  const toggleSelect = (codigo) => {
-    setSelected((prev) =>
-      prev.includes(codigo) ? prev.filter((id) => id !== codigo) : [...prev, codigo]
-    );
+    console.log(data)
+
+    if (error) {
+      console.error("❌ Error cargando detalle:", error);
+      return;
+    }
+
+    setFacturaDetalle(data);
+    setDetalleVisible(true);
   };
 
-  const total = pendientes
-    .filter((f) => selected.includes(f.numero))
-    .reduce((sum, f) => sum + (f.total || 0), 0)
-    .toFixed(2);
+  //  Selección múltiple
+  // const toggleSelect = (codigo) => {
+  //   setSelected((prev) =>
+  //     prev.includes(codigo) ? prev.filter((id) => id !== codigo) : [...prev, codigo]
+  //   );
+  // };
 
-  const allSelected = pendientes.length > 0 && selected.length === pendientes.length;
-  const toggleSelectAll = () => {
-    setSelected(allSelected ? [] : pendientes.map((f) => f.numero));
-  };
+  // const total = pendientes
+  //   .filter((f) => selected.includes(f.numero))
+  //   .reduce((sum, f) => sum + (f.total || 0), 0)
+  //   .toFixed(2);
 
-  // 🔹 UI principal
+  // const allSelected = pendientes.length > 0 && selected.length === pendientes.length;
+
+  // const toggleSelectAll = () => {
+  //   setSelected(allSelected ? [] : pendientes.map((f) => f.numero));
+  // };
+  useEffect(() => {
+    // Nada seleccionado → cerrar todo
+    if (selected.length === 0) {
+      setModalTipoPago(false);
+      setPreview(false);
+      return;
+    }
+
+    // Si selecciona 1 → pago total directo (sin modal)
+    if (selected.length >= 2) {
+      setEsPagoParcial(true);
+      setModalTipoPago(true);
+      setPreview(false);
+      return;   // ⛔ DETIENE TODO
+    }
+
+    console.log("🔢 Cantidad seleccionada:", selected.length);
+
+  }, [selected]);
+  useEffect(() => {
+    setShowBottom(!preview && !detalleVisible && !modalTipoPago);
+  }, [preview, detalleVisible, modalTipoPago]);
+  const facturasSeleccionadas =
+  tab === "pendientes"
+    ? pendientes.filter((f) => selected.includes(f.numero))
+    : tab === "parcial"
+    ? parcial.filter((f) => selected.includes(f.numero))
+    : [];
+
+
+  //  UI principal
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-[#01060c] text-gray-900 dark:text-gray-100 transition-colors duration-300">
       <Sidebar />
@@ -244,11 +323,16 @@ export default function Facturas({ cliente }) {
                       monto={f.total?.toFixed(2)}
                       estado={f.estado}
                       fecha={f.created_at.slice(0, 10).split("-").reverse().join(" / ")}
-                      onViewClick={() => {
-                        setFacturaDetalle(f);
-                        setDetalleVisible(true);
-
+                      isSelected={selected.includes(f.numero)}
+                      onToggleSelect={(codigo) => {
+                        setSelected(prev =>
+                          prev.includes(codigo)
+                            ? prev.filter(id => id !== codigo)
+                            : [...prev, codigo]
+                        );
                       }}
+                      onViewClick={() => fetchFacturaDetalle(f.id_factura)}
+
                       onPayClick={(codigo) => {
                         setSelected([codigo]);
                         setEsPagoParcial(false);
@@ -271,10 +355,7 @@ export default function Facturas({ cliente }) {
                     monto={f.total?.toFixed(2)}
                     estado={f.estado}
                     fecha={new Date(f.created_at).toLocaleDateString("es-PA")}
-                    onViewClick={() => {
-                      setFacturaDetalle(f);
-                      setDetalleVisible(true);
-                    }}
+                    onViewClick={() => fetchFacturaDetalle(f.id_factura)}
                   />
                 ))}
               </div>
@@ -291,9 +372,11 @@ export default function Facturas({ cliente }) {
                     monto={f.total?.toFixed(2)}
                     estado={f.estado}
                     fecha={new Date(f.created_at).toLocaleDateString("es-PA")}
-                    onViewClick={() => {
-                      setFacturaDetalle(f);
-                      setDetalleVisible(true);
+                    onViewClick={() => fetchFacturaDetalle(f.id_factura)}
+                    onPayClick={() => {
+                      setSelected([f.numero]);
+                      setEsPagoParcial(false);
+                      setPreview(true);
                     }}
                   />
                 ))}
@@ -302,7 +385,7 @@ export default function Facturas({ cliente }) {
           </>
         )}
 
-        {/* 🔹 Modal de Detalle */}
+        {/*  Modal de Detalle */}
         {detalleVisible && facturaDetalle && (
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center z-50 ">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-50">
@@ -310,37 +393,74 @@ export default function Facturas({ cliente }) {
                 <DetalleFactura factura={facturaDetalle} onClose={() => setDetalleVisible(false)} />
               </div>
             </div>
-
           </div>
         )}
+        {modalTipoPago && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center 
+                  items-end md:items-center z-9999">
+
+            <div className="bg-white dark:bg-[#01060c] dark:text-gray-100 
+                w-full md:w-[400px] p-6 rounded-t-3xl md:rounded-3xl shadow-xl relative z-10000">
+
+
+              <button
+                onClick={() => {
+                  setModalTipoPago(false);
+                  setSelected([]);
+                }}
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+              >
+                <X size={20} />
+              </button>
+
+              <h2 className="text-xl font-bold text-center mb-4 dark:text-white">
+                ¿Cómo deseas pagar?
+              </h2>
+              <button
+                onClick={() => {
+                  setEsPagoParcial(true);
+                  setModalTipoPago(false);
+                  setPreview(true);
+                }}
+                className="w-full py-3 rounded-xl bg-linear-to-r from-orange-500 to-pink-500 text-white font-medium shadow hover:shadow-lg transition"
+              >
+                Pago Parcial
+              </button>
+            </div>
+          </div>
+        )}
+
 
         {preview && (
           <>
             {esPagoParcial ? (
               // ✅ Modal de PAGO PARCIAL
               <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-end md:items-center z-50">
-                <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 w-full md:w-[440px] rounded-t-3xl md:rounded-3xl shadow-2xl p-6 relative animate-fadeIn">
+                <div className="bg-white dark:bg-[#01060c] text-gray-900 dark:text-gray-100 w-full md:w-[440px] rounded-t-3xl md:rounded-3xl shadow-2xl p-6 relative animate-fadeIn">
                   <button
-                    onClick={() => setPreview(false)}
+                    onClick={() => {
+                      setPreview(false);
+                      setSelected([]);
+                    }}
                     className="absolute top-3 left-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition"
                   >
                     <ArrowLeft size={20} />
                   </button>
 
-                  <h3 className="text-lg font-bold text-center text-gray-800 dark:text-[#f2af1e] mb-2">
+                  <h3 className="text-lg font-bold text-center text-[#01060c] dark:text-white mb-2">
                     Pago Parcial de Facturas
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-5">
                     Ingresa los montos que deseas abonar a cada factura.
                   </p>
 
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 mb-5 max-h-72 overflow-y-auto space-y-3">
+                  <div className="bg-gray-100 dark:bg-[#0e171e] rounded-2xl p-4 mb-5 max-h-72 overflow-y-auto space-y-3">
                     {pendientes
                       .filter((f) => selected.includes(f.numero))
                       .map((f) => (
                         <div
                           key={f.numero}
-                          className="rounded-xl bg-white/80 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md transition-all"
+                          className="rounded-xl bg-white/80 dark:bg-[#01060c] border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md transition-all"
                         >
                           <div className="flex justify-between items-center">
                             <div>
@@ -406,7 +526,7 @@ export default function Facturas({ cliente }) {
 
                   <div className="flex justify-between items-center font-semibold text-gray-700 dark:text-gray-200 mb-6">
                     <span>Total a Pagar:</span>
-                    <span className="text-[#b71f4b] dark:text-[#f2af1e] text-lg">
+                    <span className="text-orange-500 dark:text-pink-500 text-2xl">
                       $
                       {pendientes
                         .filter((f) => selected.includes(f.numero))
@@ -479,7 +599,7 @@ export default function Facturas({ cliente }) {
 
                       setPreview(false);
                     }}
-                    className="w-full bg-linear-to-r from-[#b71f4b] to-[#d12b60] dark:from-[#f2af1e] dark:to-[#e6c565] text-white dark:text-gray-900 py-3 rounded-xl text-sm font-medium shadow-md hover:shadow-lg transition-transform hover:-translate-y-0.5 mb-3 flex items-center justify-center gap-2"
+                    className="w-full bg-linear-to-r from-orange-500 to-pink-500 text-white py-3 rounded-xl text-sm font-medium shadow-md hover:shadow-lg transition-transform hover:-translate-y-0.5 mb-3 flex items-center justify-center gap-2"
                   >
                     <CheckCircle2 className="w-5 h-5" />
                     Confirmar Pago Parcial
@@ -487,7 +607,7 @@ export default function Facturas({ cliente }) {
 
                   <button
                     onClick={() => setPreview(false)}
-                    className="w-full py-3 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                    className="w-full py-3 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#0e171e] hover:bg-gray-200 dark:hover:bg-gray-700 transition"
                   >
                     Cancelar
                   </button>
@@ -536,10 +656,14 @@ export default function Facturas({ cliente }) {
                     <div className="flex justify-around gap-3 mt-6">
                       {/* Cancelar */}
                       <button
-                        onClick={() => setPreview(false)}
+                        onClick={() => {
+                          setEsPagoParcial(true);
+                          setModalTipoPago(false);
+                          setPreview(true);
+                        }}
                         className="flex items-center justify-center px-6 py-2.5 rounded-full border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-all"
                       >
-                        Cancelar
+                        Pago Parcial
                       </button>
 
                       {/* Pagar ahora */}
@@ -592,7 +716,7 @@ export default function Facturas({ cliente }) {
                         }}
                         className="flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-medium text-white bg-linear-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 transition-all shadow-sm"
                       >
-                        Pagar ahora
+                        Pagar Total
                       </button>
                     </div>
 

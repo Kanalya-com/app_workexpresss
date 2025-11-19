@@ -5,21 +5,21 @@ import BottomNav from "../component/BottomNav";
 import Casillero from "../component/Casillero";
 import Cartilla from "../component/Cartilla";
 import Notificaciones from "../component/Notificaciones";
+import { useAppStore } from "../store/appStore";
 import Promociones from "../component/Promociones";
 import { useAuth } from "../context/AuthContext";
-import ChatBubble from "../component/ChatBubble";
 import { Moon, Sun, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import { ThemeProvider, useTheme } from "../component/ThemeProvider";
 import Logo from "../assets/img/LOGO-ROJO-LETRA.png"
 import LogoP from "../assets/icon/mini_target.webp"
 import Paquetes from "../component/Paquetes";
+import WillySeguimiento from "../component/WillySeguimiento"
 export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const { user, loading } = useAuth();
   const [showBottom, setShowBottom] = useState(true);
-  const [userName, setUserName] = useState("");
-  const [cliente, setCliente] = useState(null);
+   const { cliente, cargarCliente, cargarPaquetes } = useAppStore();
   const [modalsOpen, setModalsOpen] = useState({
     cartilla: false,
     casillero: false,
@@ -47,36 +47,19 @@ export default function Home() {
     [handleModalChange]
   );
 
+  // 🔥 Carga cliente UNA VEZ y lo cachea
   useEffect(() => {
-    const getCliente = async () => {
-      if (!user?.email) return;
-      const { data, error } = await supabase
-        .from("tb_cliente")
-        .select(`
-          id_cliente,
-          nombre,
-          apellido,
-          id_sucursal (
-            id_sucursal,
-            nombre,
-            direccion
-          )
-        `)
-        .eq("email", user.email)
-        .maybeSingle();
-
-      if (!error && data) {
-        setCliente({
-          id_cliente: data.id_cliente,
-          nombre: data.nombre,
-          apellido: data.apellido,
-          sucursal: data.id_sucursal?.nombre || "",
-        });
-        setUserName(data.nombre);
-      }
-    };
-    getCliente();
+    if (user?.email) {
+      cargarCliente(user.email);
+    }
   }, [user]);
+
+  // 🔥 Cuando el cliente está listo, carga sus paquetes
+  useEffect(() => {
+    if (cliente?.id_cliente) {
+      cargarPaquetes(cliente.id_cliente);
+    }
+  }, [cliente]);
 
   if (loading)
     return (
@@ -146,7 +129,7 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <p className="text-xl text-[#01060c] dark:text-white font-bold">Hola,</p>
               <h1 className="text-xl font-bold text-[#d30046]">
-                {userName}
+                {cliente?.nombre || ""}
               </h1>
             </div>
 
@@ -156,21 +139,37 @@ export default function Home() {
           </div>
 
           {/* 🔹 Resto del contenido */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
-            <Promociones onModalChange={modalHandlers.promociones} />
-            <Cartilla />
-          </div>
+          {/* MOBILE: todo en columna */}
+<div className="flex flex-col gap-4 lg:hidden">
+  <WillySeguimiento/>
+  <Paquetes />
+  <Promociones onModalChange={modalHandlers.promociones} />
+  <Cartilla />
+  <Casillero cliente={cliente} />
+</div>
 
-            <div className="grid lg:grid-cols-4 gap-4">
-              <div className="lg:col-span-3">
-                <Paquetes />
-              </div>
-              <div className="lg:col-span-1">
-                <Casillero cliente={cliente} />
+{/* DESKTOP: 2 filas con 3/4 y 1/4 */}
+<div className="hidden lg:grid lg:grid-cols-4 lg:gap-4">
+  
+  {/* Fila 1 */}
+  <div className="lg:col-span-1 order-1">
+    <Cartilla />
+    
+  </div>
+  <div className="lg:col-span-3 order-2">
+    <Promociones onModalChange={modalHandlers.promociones} />
+  </div>
 
+  {/* Fila 2 */}
+  <div className="lg:col-span-3 order-3">
+    <Paquetes />
+  </div>
+  <div className="lg:col-span-1 order-4">
+    <Casillero cliente={cliente} />
+  </div>
 
-              </div>
-            </div>
+</div>
+
         
 
 
