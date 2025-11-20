@@ -5,32 +5,16 @@ import { usePerfilStore } from "../store/perfilStore";
 
 export default function SeguroPaqueteria({ clienteId, precio = 0.99, onPopup }) {
   const { seguroActivo, loadingSeguro, toggleSeguro } = usePerfilStore();
-  const [ultimaDesactivacion, setUltimaDesactivacion] = useState(null);
-  
-
-  // 🔹 Cargar estado actual del seguro
-  // useEffect(() => {
-  //   const fetchSeguro = async () => {
-  //     if (!clienteId) return;
-  //     const { data, error } = await supabase
-  //       .from("tb_cliente")
-  //       .select("seguro")
-  //       .eq("id_cliente", clienteId)
-  //       .maybeSingle();
-
-  //     if (!error && data) {
-  //       setActivo(data.seguro ?? true);
-  //       setUltimaDesactivacion(data.fecha_desactivacion);
-  //     }
-  //   };
-  //   fetchSeguro();
-  // }, [clienteId]);
-
   // 🔹 Cambiar estado del seguro
   const handleToggleSeguro = async () => {
-  const res = await toggleSeguro(clienteId);
-  onPopup(res);
-};
+    const res = await toggleSeguro(clienteId);
+    onPopup({
+      show: true,
+      success: res.success,
+      message: res.message,
+    });
+
+  };
 
 
   return (
@@ -46,22 +30,22 @@ export default function SeguroPaqueteria({ clienteId, precio = 0.99, onPopup }) 
       <div className="flex items-center justify-between mb-3">
         <h3
           className={`font-semibold text-base transition-colors ${seguroActivo
-              ? "text-orange-500 dark:text-pink-500"
-              : "text-gray-600 dark:text-gray-400"
+            ? "text-orange-500 dark:text-pink-500"
+            : "text-gray-600 dark:text-gray-400"
             }`}
         >
           Seguro de Paquetería
         </h3>
         <div
           className={`p-2 rounded-full transition-colors ${seguroActivo
-              ? "bg-orange-500/30 dark:bg-pink-500/30"
-              : "bg-gray-200 dark:bg-gray-800"
+            ? "bg-orange-500/30 dark:bg-pink-500/30"
+            : "bg-gray-200 dark:bg-gray-800"
             }`}
         >
           <ShieldCheck
             className={`w-5 h-5 transition-colors ${seguroActivo
-                ? "text-orange-500 dark:text-pink-500"
-                : "text-gray-400 dark:text-gray-500"
+              ? "text-orange-500 dark:text-pink-500"
+              : "text-gray-400 dark:text-gray-500"
               }`}
           />
         </div>
@@ -75,8 +59,8 @@ export default function SeguroPaqueteria({ clienteId, precio = 0.99, onPopup }) 
       {/* Precio */}
       <p
         className={`text-3xl font-extrabold tracking-tight ${seguroActivo
-            ? "text-orange-500 dark:text-pink-500"
-            : "text-gray-300"
+          ? "text-orange-500 dark:text-pink-500"
+          : "text-gray-300"
           }`}
       >
         ${precio.toFixed(2)}
@@ -97,10 +81,11 @@ export default function SeguroPaqueteria({ clienteId, precio = 0.99, onPopup }) 
           onClick={handleToggleSeguro}
           disabled={loadingSeguro}
           className={`relative w-14 h-7 flex items-center rounded-full transition-all duration-300 ${seguroActivo
-              ? "bg-linear-to-r from-orange-500 to-pink-500 rounded-2xl "
-              : "bg-gray-300 dark:bg-gray-700"
+            ? "bg-linear-to-r from-orange-500 to-pink-500 rounded-2xl"
+            : "bg-gray-300 dark:bg-gray-700"
             }`}
         >
+
           <span
             className={`absolute left-1 top-1 w-5 h-5 bg-white dark:bg-gray-900 rounded-full shadow-sm transform transition-transform duration-300 ${seguroActivo ? "translate-x-7" : "translate-x-0"
               }`}

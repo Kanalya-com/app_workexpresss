@@ -21,6 +21,58 @@ export default function Planes({ clienteId, onPopup }) {
   );
   const [selectedPlan, setSelectedPlan] = useState(planActual?.id_plan || "");
 
+  /* ---------------------------------------------------
+     🚧 FUNCIÓN PARA INTENTAR EDITAR EL PLAN
+  ----------------------------------------------------*/
+  const tryEdit = () => {
+    const now = new Date();
+
+    // Si NO existe fecha → bloquear
+    if (!lastUpdate) {
+      onPopup({
+        show: true,
+        success: false,
+        message: "No puedes editar aún. No existe fecha de última actualización.",
+      });
+      return;
+    }
+
+    // Diferencia en días
+    const diffDays = (now - new Date(lastUpdate)) / (1000 * 60 * 60 * 24);
+
+    if (diffDays < 120) { // 4 meses ≈ 120 días
+      onPopup({
+        show: true,
+        success: false,
+        message: `Debes esperar 4 meses. Han pasado ${Math.floor(diffDays)} días.`,
+      });
+      return;
+    }
+
+    // ✔ Si pasó la validación
+    setEditMode(true);
+  };
+
+
+  /* ---------------------------------------------------
+     💾 GUARDAR CAMBIOS
+  ----------------------------------------------------*/
+  const handleSave = async () => {
+    const res = await guardarPlan(clienteId, selectedSucursal, selectedPlan);
+
+    onPopup({
+      show: true,
+      success: res.success,
+      message: res.success ? "Cambios guardados correctamente" : "Error al guardar cambios",
+    });
+
+    if (res.success) setEditMode(false);
+  };
+
+
+  /* ---------------------------------------------------
+     🌀 LOADING
+  ----------------------------------------------------*/
   if (loadingPlan) {
     return (
       <div className="p-5 bg-white dark:bg-[#040c13] rounded-xl shadow text-center">
@@ -38,18 +90,9 @@ export default function Planes({ clienteId, onPopup }) {
     );
   }
 
-  const handleSave = async () => {
-    const res = await guardarPlan(clienteId, selectedSucursal, selectedPlan);
-
-    onPopup({
-      show: true,
-      success: res.success,
-      message: res.success ? "Cambios guardados correctamente" : "Error al guardar cambios",
-    });
-
-    if (res.success) setEditMode(false);
-  };
-
+  /* ---------------------------------------------------
+     UI PRINCIPAL
+  ----------------------------------------------------*/
   return (
     <div
       className={`relative rounded-2xl p-5 shadow-md overflow-hidden border transition-all 
@@ -65,21 +108,7 @@ export default function Planes({ clienteId, onPopup }) {
 
         {!editMode ? (
           <button
-            onClick={() => {
-              const fourMonthsAgo = new Date();
-              fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
-
-              if (lastUpdate && lastUpdate > fourMonthsAgo) {
-                onPopup({
-                  show: true,
-                  success: false,
-                  message: "Debes esperar 4 meses desde el último cambio.",
-                });
-                return;
-              }
-
-              setEditMode(true);
-            }}
+            onClick={tryEdit}
             className="bg-orange-500/30 dark:bg-pink-500/30 rounded-full p-2"
           >
             <Edit size={16} className="text-orange-500 dark:text-pink-500" />
@@ -145,11 +174,10 @@ export default function Planes({ clienteId, onPopup }) {
               <div
                 key={p.id_plan}
                 onClick={() => setSelectedPlan(p.id_plan)}
-                className={`border rounded-lg p-3 cursor-pointer transition-all ${
-                  selectedPlan === p.id_plan
+                className={`border rounded-lg p-3 cursor-pointer transition-all ${selectedPlan === p.id_plan
                     ? "border-orange-500 dark:border-pink-500 bg-orange-500/30 dark:bg-pink-500/30"
                     : "border-gray-300 dark:border-gray-700 hover:border-orange-500/30 dark:hover:border-pink-500/30"
-                }`}
+                  }`}
               >
                 <h4 className="font-semibold text-[#b71f4b] dark:text-[#f2af1e]">{p.descripcion}</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-300">{p.beneficios}</p>

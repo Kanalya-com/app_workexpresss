@@ -144,51 +144,57 @@ export const usePerfilStore = create((set, get) => ({
    *     ACTIVAR / DESACTIVAR SEGURO
    * ========================================== */
   toggleSeguro: async (clienteId) => {
-    const activoActual = get().seguroActivo;
-    const nuevoEstado = !activoActual;
-    const now = new Date();
+  const activoActual = get().seguroActivo;
+  const nuevoEstado = !activoActual;
+  const now = new Date();
 
-    // Validar 90 días
-    if (!nuevoEstado) {
-      localStorage.setItem("ultimaDesactivacionSeguro", now.toISOString());
-    }
+  // 🔐 Validación 90 días
+  const ultimaLocal = localStorage.getItem("ultimaDesactivacionSeguro");
 
-    const ultimaLocal = localStorage.getItem("ultimaDesactivacionSeguro");
-    if (!activoActual && ultimaLocal) {
-      const diff = (now - new Date(ultimaLocal)) / (1000 * 60 * 60 * 24);
-      if (diff < 90) {
-        return { success: false, message: "No puedes reactivar el seguro antes de 90 días." };
-      }
-    }
-
-    set({ loadingSeguro: true });
-
-    try {
-      const { error } = await supabase
-        .from("tb_cliente")
-        .update({ seguro: nuevoEstado })
-        .eq("id_cliente", clienteId);
-
-      if (error) throw error;
-
-      set({
-        seguroActivo: nuevoEstado,
-        ultimaDesactivacion: nuevaDesactivacion,
-      });
-
+  if (!activoActual && ultimaLocal) {
+    const diff = (now - new Date(ultimaLocal)) / (1000 * 60 * 60 * 24);
+    if (diff < 90) {
       return {
-        success: true,
-        message: nuevoEstado
-          ? "Seguro activado correctamente."
-          : "Seguro desactivado. No podrás reactivarlo durante 90 días.",
+        success: false,
+        message: "No puedes reactivar el seguro antes de 90 días.",
       };
-    } catch (err) {
-      console.error("Error toggle seguro:", err);
-      return { success: false, message: "Error al actualizar el seguro." };
-    } finally {
-      set({ loadingSeguro: false });
     }
-  },
+  }
+
+  // Si DESACTIVA → guardar fecha
+  if (!nuevoEstado) {
+    localStorage.setItem("ultimaDesactivacionSeguro", now.toISOString());
+  }
+
+  set({ loadingSeguro: true });
+
+  try {
+    const { error } = await supabase
+      .from("tb_cliente")
+      .update({ seguro: nuevoEstado })
+      .eq("id_cliente", clienteId);
+
+    if (error) throw error;
+
+    set({
+      seguroActivo: nuevoEstado,
+      ultimaDesactivacion: nuevoEstado ? null : now.toISOString(),
+    });
+
+    return {
+      success: true,
+      message: nuevoEstado
+        ? "Seguro activado correctamente."
+        : "Seguro desactivado. No podrás reactivarlo durante 90 días.",
+    };
+  } catch (err) {
+    console.error("Error toggle seguro:", err);
+    return { success: false, message: "Error al actualizar el seguro." };
+  } finally {
+    set({ loadingSeguro: false });
+  }
+},
+
 
   /* ==========================================
    *        LIMPIAR TODO AL CERRAR SESIÓN

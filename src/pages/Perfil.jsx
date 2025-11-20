@@ -153,11 +153,17 @@ function Personal({ cliente, editMode, setEditMode, saving, handleSave, setClien
     }
   };
   useEffect(() => {
-    if (popup.show) {
-      const timer = setTimeout(() => setPopup({ show: false }), 2500); // se cierra en 2.5s
-      return () => clearTimeout(timer);
-    }
-  }, [popup.show]);
+  if (popup.show) {
+    const timer = setTimeout(
+      () => setPopup(prev => ({ ...prev, show: false })), 
+      2500
+    );
+    return () => clearTimeout(timer);
+  }
+}, [popup.show]);
+
+
+
   return (
     <div className="flex flex-col md:flex-row md:items-start md:justify-center gap-8 md:gap-12 px-2 md:px-6">
       {/* 🔹 Plan actual */}
