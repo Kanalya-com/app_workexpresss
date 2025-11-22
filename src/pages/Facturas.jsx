@@ -673,8 +673,10 @@ export default function Facturas({ cliente }) {
                       {/* ⭐ BOTÓN DE PAGO TOTAL CON LOADER */}
                       <button
                         onClick={async () => {
-                          // Estado React → no uses querySelector
                           setLoadingPago(true);
+
+                          const button = document.querySelector("#pago-btn");
+                          button.disabled = true;
 
                           const facturasTotales = facturasSeleccionadas.filter((f) =>
                             selected.includes(f.numero)
@@ -687,40 +689,50 @@ export default function Facturas({ cliente }) {
                           }, 0);
 
                           const descripcion = `Pago facturas: ${facturasTotales
-                            .map((f) => f.numero)
+                            .map(f => f.numero)
                             .join(", ")}`;
 
+                          let resp;
                           let redirectUrl = null;
-
                           try {
-                            const resp = await supabase.functions.invoke("rapid-processor", {
+                            resp = await supabase.functions.invoke("rapid-processor", {
                               body: {
                                 monto: total,
                                 descripcion,
                                 id_cliente: cliente.id_cliente,
-                                facturas: facturasTotales.map((f) => f.id_factura),
-                              },
+                                facturas: facturasTotales.map(f => f.id_factura)
+                              }
                             });
-
-                            // único parse
-                            const parsed = JSON.parse(resp.data);
+                            let parsed = JSON.parse(resp.data);
                             redirectUrl = parsed.url;
-
-                          } catch (error) {
-                            console.error("❌ ERROR INVOKE:", error);
-                            alert("Error creando el pago.");
+                          } catch (e) {
+                            console.error("❌ ERROR INVOKE:", e);
+                            alert("Error creando pago.");
                             setLoadingPago(false);
+                            button.disabled = false;
                             return;
                           }
 
-                          // 🔥 El redirect DEBE hacerse aquí sin más renders
+                          let parsed;
+                          try {
+                            parsed = JSON.parse(resp.data);
+                          } catch {
+                            alert("Respuesta inválida del servidor.");
+                            setLoadingPago(false);
+                            button.disabled = false;
+                            return;
+                          }
+
                           if (redirectUrl) {
                             window.location.assign(redirectUrl);
-                            return;
+                            return; // 🔥 evita que React vuelva a renderizar antes del redirect
                           }
 
                           alert("No se pudo obtener la URL de pago.");
+
+
                           setLoadingPago(false);
+                          button.disabled = false;
                         }}
                         className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium text-white bg-linear-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                         id="pago-btn"
@@ -754,7 +766,6 @@ export default function Facturas({ cliente }) {
                           "Pago total"
                         )}
                       </button>
-
                     </div>
 
 
