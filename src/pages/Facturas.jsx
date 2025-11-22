@@ -675,66 +675,71 @@ export default function Facturas({ cliente }) {
                         onClick={async () => {
                           setLoadingPago(true);
 
-                          const button = document.querySelector("#pago-btn");
-                          button.disabled = true;
+                          const btn = document.querySelector("#pago-btn");
+                          btn.disabled = true;
 
-                          const facturasTotales = facturasSeleccionadas.filter((f) =>
-                            selected.includes(f.numero)
-                          );
-
-                          const total = facturasTotales.reduce((sum, f) => {
-                            if (tab === "pendientes") return sum + Number(f.total);
-                            if (tab === "parcial") return sum + Number(f.total_restante);
-                            return sum;
-                          }, 0);
-
-                          const descripcion = `Pago facturas: ${facturasTotales
-                            .map(f => f.numero)
-                            .join(", ")}`;
-
-                          let resp;
-                          let redirectUrl = null;
                           try {
-                            resp = await supabase.functions.invoke("rapid-processor", {
+                            const facturasTotales = facturasSeleccionadas.filter((f) =>
+                              selected.includes(f.numero)
+                            );
+
+                            const total = facturasTotales.reduce((sum, f) => {
+                              if (tab === "pendientes") return sum + Number(f.total);
+                              if (tab === "parcial") return sum + Number(f.total_restante);
+                              return sum;
+                            }, 0);
+
+                            const descripcion = `Pago facturas: ${facturasTotales
+                              .map((f) => f.numero)
+                              .join(", ")}`;
+
+                            // 🚨 Ejecutamos la función
+                            const resp = await supabase.functions.invoke("rapid-processor", {
                               body: {
                                 monto: total,
                                 descripcion,
                                 id_cliente: cliente.id_cliente,
-                                facturas: facturasTotales.map(f => f.id_factura)
-                              }
+                                facturas: facturasTotales.map((f) => f.id_factura),
+                              },
                             });
-                            let parsed = JSON.parse(resp.data);
-                            redirectUrl = parsed.url;
-                          } catch (e) {
-                            console.error("❌ ERROR INVOKE:", e);
-                            alert("Error creando pago.");
+
+                            console.log("RESPUESTA RAW:", resp);
+
+                            if (!resp.data) {
+                              throw new Error("La función no devolvió datos");
+                            }
+
+                            // Solo parseamos **UNA VEZ**
+                            let parsed;
+                            try {
+                              parsed = JSON.parse(resp.data);
+                            } catch (e) {
+                              console.error("❌ JSON inválido:", resp.data);
+                              throw new Error("Formato inválido recibido desde el servidor");
+                            }
+
+                            console.log("RESP PARSED:", parsed);
+
+                            if (!parsed.url) {
+                              throw new Error("No se recibió una URL de pago");
+                            }
+
+                            // 🚀 Redirigir
+                            window.open(parsed.url, "_self");
+                            return; // Detiene cualquier render innecesario
+
+                          } catch (error) {
+                            console.error("ERROR REAL:", error);
+                            alert(`Error creando el pago:\n${error.message}`);
+                          } finally {
                             setLoadingPago(false);
-                            button.disabled = false;
-                            return;
+                            btn.disabled = false;
                           }
-
-                          let parsed;
-                          try {
-                            parsed = JSON.parse(resp.data);
-                          } catch {
-                            alert("Respuesta inválida del servidor.");
-                            setLoadingPago(false);
-                            button.disabled = false;
-                            return;
-                          }
-
-                          if (redirectUrl) {
-                            window.location.assign(redirectUrl);
-                            return; // 🔥 evita que React vuelva a renderizar antes del redirect
-                          }
-
-                          alert("No se pudo obtener la URL de pago.");
-
-
-                          setLoadingPago(false);
-                          button.disabled = false;
                         }}
-                        className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium text-white bg-linear-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full 
+             text-sm font-medium text-white bg-linear-to-r from-orange-500 
+             to-pink-500 hover:from-orange-600 hover:to-pink-600 transition-all 
+             shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                         id="pago-btn"
                         disabled={loadingPago}
                       >
@@ -766,6 +771,7 @@ export default function Facturas({ cliente }) {
                           "Pago total"
                         )}
                       </button>
+
                     </div>
 
 
