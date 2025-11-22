@@ -666,7 +666,6 @@ export default function Facturas({ cliente }) {
                         Pago Parcial
                       </button>
 
-                      {/* Pagar ahora */}
                       <button
                         onClick={async () => {
                           const button = document.querySelector("#pago-btn");
@@ -706,8 +705,18 @@ export default function Facturas({ cliente }) {
 
                           console.log("RESPUESTA FUNCIÓN:", resp);
 
-                          if (resp?.data?.url) {
-                            window.location.href = resp.data.url;
+                          // 👇 AQUÍ ESTABA EL PROBLEMA
+                          let parsed;
+                          try {
+                            parsed = JSON.parse(resp.data);
+                          } catch {
+                            alert("Respuesta inválida del servidor.");
+                            button.disabled = false;
+                            return;
+                          }
+
+                          if (parsed.url) {
+                            window.location.href = parsed.url;
                           } else {
                             alert("No se pudo obtener la URL de pago.");
                           }
@@ -719,6 +728,7 @@ export default function Facturas({ cliente }) {
                       >
                         Pago total
                       </button>
+
 
 
 
