@@ -656,21 +656,24 @@ export default function Facturas({ cliente }) {
                     </div>
 
                     <div className="flex justify-around gap-3 mt-6">
-                      {/* Cancelar */}
-                      <button
-                        onClick={() => {
-                          setEsPagoParcial(true);
-                          setModalTipoPago(false);
-                          setPreview(true);
-                        }}
-                        className="flex items-center justify-center px-6 py-2.5 rounded-full border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-all"
-                      >
-                        Pago Parcial
-                      </button>
+                      {/* ❌ OCULTAR BOTÓN PAGO PARCIAL CUANDO loadingPago ESTÁ TRUE */}
+                      {!loadingPago && (
+                        <button
+                          onClick={() => {
+                            setEsPagoParcial(true);
+                            setModalTipoPago(false);
+                            setPreview(true);
+                          }}
+                          className="flex items-center justify-center px-6 py-2.5 rounded-full border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-all"
+                        >
+                          Pago Parcial
+                        </button>
+                      )}
 
+                      {/* ⭐ BOTÓN DE PAGO TOTAL CON LOADER */}
                       <button
                         onClick={async () => {
-                          setLoadingPago(true);  // 👉 Muestra loader
+                          setLoadingPago(true);
 
                           const button = document.querySelector("#pago-btn");
                           button.disabled = true;
@@ -708,8 +711,6 @@ export default function Facturas({ cliente }) {
                             return;
                           }
 
-                          console.log("RESPUESTA FUNCIÓN:", resp);
-
                           let parsed;
                           try {
                             parsed = JSON.parse(resp.data);
@@ -736,7 +737,7 @@ export default function Facturas({ cliente }) {
                         {loadingPago ? (
                           <div className="flex items-center gap-2">
                             <svg
-                              className="animate-spin h-5 w-5 text-white"
+                              className="animate-spin h-4 text-white"
                               xmlns="http://www.w3.org/2000/svg"
                               fill="none"
                               viewBox="0 0 24 24"
@@ -761,12 +762,8 @@ export default function Facturas({ cliente }) {
                           "Pago total"
                         )}
                       </button>
-
-
-
-
-
                     </div>
+
 
 
                   </div>
