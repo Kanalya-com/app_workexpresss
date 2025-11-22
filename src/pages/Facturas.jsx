@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Sidebar from "../component/Sidebar";
 import BottomNav from "../component/BottomNav";
 import FacturaCard from "../component/FacturaCard";
@@ -6,6 +6,7 @@ import { CreditCard, CheckCircle2, ArrowLeft, X } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import FacturasResumen from "../component/FacturasResumen";
 import DetalleFactura from "../component/DetalleFactura";
+
 export default function Facturas({ cliente }) {
   const [tab, setTab] = useState("pendientes");
   const [selected, setSelected] = useState([]);
@@ -20,10 +21,15 @@ export default function Facturas({ cliente }) {
   const [modalTipoPago, setModalTipoPago] = useState(false);
   const [loadingPago, setLoadingPago] = useState(false);
 
-  // 🔹 Mostrar / ocultar BottomNav según vista previa
+  // 👇 ref para el botón de pago total (en vez de querySelector)
+  const payButtonRef = useRef(null);
+
+  // 🔹 Mostrar / ocultar BottomNav según modales
   useEffect(() => {
-    setShowBottom(!preview && !detalleVisible);
-  }, [preview, detalleVisible]);
+    setShowBottom(!preview && !detalleVisible && !modalTipoPago);
+  }, [preview, detalleVisible, modalTipoPago]);
+
+  // 🔹 Cálculo de total pendiente + realtime
   useEffect(() => {
     if (!cliente?.id_cliente) return;
 
@@ -31,7 +37,7 @@ export default function Facturas({ cliente }) {
       const { data, error } = await supabase
         .from("tb_factura")
         .select("total, estado")
-        .eq("id_cliente", cliente.id_cliente);  // ✅ FILTRAR POR CLIENTE
+        .eq("id_cliente", cliente.id_cliente);
 
       if (error) {
         console.error("Error cargando facturas:", error);
@@ -46,12 +52,11 @@ export default function Facturas({ cliente }) {
         .filter((f) => f.estado?.toLowerCase() === "pendiente")
         .reduce((acc, f) => acc + Number(f.total || 0), 0);
 
-      setTotalPendiente(suma); // Se pondrá a 0 si no hay
+      setTotalPendiente(suma);
     };
 
     fetchPendientes();
 
-    // 🔥 Realtime filtrado por cliente
     const channel = supabase
       .channel("realtime_facturas_cliente")
       .on(
@@ -60,7 +65,7 @@ export default function Facturas({ cliente }) {
           event: "*",
           schema: "public",
           table: "tb_factura",
-          filter: `id_cliente=eq.${cliente.id_cliente}`, // 🔥 FILTRAR AQUI TAMBIÉN
+          filter: `id_cliente=eq.${cliente.id_cliente}`,
         },
         async () => {
           const { data } = await supabase
@@ -78,20 +83,20 @@ export default function Facturas({ cliente }) {
     };
   }, [cliente]);
 
-  // 🔹 Bloquear scroll cuando el modal esté abierto
+  // 🔹 Bloquear scroll cuando hay modal
   useEffect(() => {
     if (preview || detalleVisible || modalTipoPago) {
-      document.body.style.overflow = "hidden"; // ❌ Bloquea el scroll
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = ""; // ✅ Lo restaura
+      document.body.style.overflow = "";
     }
 
-    // Limpieza por seguridad
     return () => {
       document.body.style.overflow = "";
     };
   }, [preview, detalleVisible, modalTipoPago]);
-  // 🔹 Cargar facturas desde Supabase
+
+  // 🔹 Cargar facturas
   useEffect(() => {
     const fetchFacturas = async () => {
       setLoading(true);
@@ -101,7 +106,8 @@ export default function Facturas({ cliente }) {
           .select("*")
           .eq("id_cliente", cliente?.id_cliente)
           .order("created_at", { ascending: false });
-        console.log(data)
+
+        console.log(data);
         if (error) throw error;
 
         setFacturas(data || []);
@@ -114,17 +120,17 @@ export default function Facturas({ cliente }) {
 
     if (cliente?.id_cliente) fetchFacturas();
   }, [cliente]);
-  //  Escucha cambios en tiempo real en tb_factura
+
+  // 🔹 Realtime de facturas
   useEffect(() => {
     if (!cliente?.id_cliente) return;
 
-    // Canal Realtime
     const canal = supabase
       .channel("facturas-realtime")
       .on(
         "postgres_changes",
         {
-          event: "*", // escucha INSERT, UPDATE y DELETE
+          event: "*",
           schema: "public",
           table: "tb_factura",
           filter: `id_cliente=eq.${cliente.id_cliente}`,
@@ -134,15 +140,12 @@ export default function Facturas({ cliente }) {
 
           setFacturas((prev) => {
             if (payload.eventType === "INSERT") {
-              // Nueva factura
               return [payload.new, ...prev];
             } else if (payload.eventType === "UPDATE") {
-              // Actualización
               return prev.map((f) =>
                 f.id_factura === payload.new.id_factura ? payload.new : f
               );
             } else if (payload.eventType === "DELETE") {
-              // Eliminación
               return prev.filter((f) => f.id_factura !== payload.old.id_factura);
             }
             return prev;
@@ -151,55 +154,61 @@ export default function Facturas({ cliente }) {
       )
       .subscribe();
 
-    // 🔹 Limpieza
     return () => {
       supabase.removeChannel(canal);
     };
   }, [cliente]);
 
-  //  Filtros por estado
-  const pendientes = facturas.filter((f) => f.estado?.toUpperCase() === "PENDIENTE");
-  const pagadas = facturas.filter((f) => f.estado?.toUpperCase() === "PAGADO");
-  const parcial = facturas.filter((f) => f.estado?.toUpperCase() === "PARCIAL");
+  // 🔹 Filtros por estado
+  const pendientes = facturas.filter(
+    (f) => f.estado?.toUpperCase() === "PENDIENTE"
+  );
+  const pagadas = facturas.filter(
+    (f) => f.estado?.toUpperCase() === "PAGADO"
+  );
+  const parcial = facturas.filter(
+    (f) => f.estado?.toUpperCase() === "PARCIAL"
+  );
+
   const fetchFacturaDetalle = async (idfactura) => {
     const { data, error } = await supabase
       .from("tb_factura")
       .select(`
-    id_factura,
-    numero,
-    created_at,
-    total,
-    subtotal,
-    estado,
-    total_pagado,
-    total_restante,
-    estado_vencimiento,
-    tb_cliente (
-      nombre,
-      email,
-      seguro
-    ),
-    tb_lote_facturacion (
-      id_lote_facturacion,
-      created_at,
-      estado,
-      tb_paquetes (
-        id_paquetes,
-        tracking_id,
-        nombre_en_etiqueta,
-        correo_vinculado,
-        peso_real,
-        largo,
-        ancho,
-        altura,
-        peso_vol
-      )
-    )
-  `)
+        id_factura,
+        numero,
+        created_at,
+        total,
+        subtotal,
+        estado,
+        total_pagado,
+        total_restante,
+        estado_vencimiento,
+        tb_cliente (
+          nombre,
+          email,
+          seguro
+        ),
+        tb_lote_facturacion (
+          id_lote_facturacion,
+          created_at,
+          estado,
+          tb_paquetes (
+            id_paquetes,
+            tracking_id,
+            nombre_en_etiqueta,
+            correo_vinculado,
+            peso_real,
+            largo,
+            ancho,
+            altura,
+            peso_vol
+          )
+        )
+      `)
       .eq("id_factura", idfactura)
       .single();
 
-    console.log(data)
+    console.log(data);
 
     if (error) {
       console.error("❌ Error cargando detalle:", error);
@@ -210,35 +219,109 @@ export default function Facturas({ cliente }) {
     setDetalleVisible(true);
   };
 
+  // 🔹 Lógica cuando cambia selección
   useEffect(() => {
-    // Nada seleccionado → cerrar todo
     if (selected.length === 0) {
       setModalTipoPago(false);
       setPreview(false);
       return;
     }
 
-    // Si selecciona 1 → pago total directo (sin modal)
     if (selected.length >= 2) {
       setEsPagoParcial(true);
       setModalTipoPago(true);
       setPreview(false);
-      return;   // ⛔ DETIENE TODO
+      return;
     }
 
     console.log("🔢 Cantidad seleccionada:", selected.length);
-
   }, [selected]);
-  useEffect(() => {
-    setShowBottom(!preview && !detalleVisible && !modalTipoPago);
-  }, [preview, detalleVisible, modalTipoPago]);
+
   const facturasSeleccionadas =
     tab === "pendientes"
       ? pendientes.filter((f) => selected.includes(f.numero))
       : tab === "parcial"
-        ? parcial.filter((f) => selected.includes(f.numero))
-        : [];
+      ? parcial.filter((f) => selected.includes(f.numero))
+      : [];
 
+  // 🔹 Handler de pago total (móvil-safe)
+  const handlePagoTotal = async () => {
+    if (loadingPago) return;
+
+    setLoadingPago(true);
+    if (payButtonRef.current) payButtonRef.current.disabled = true;
+
+    try {
+      const facturasTotales = facturasSeleccionadas.filter((f) =>
+        selected.includes(f.numero)
+      );
+
+      if (facturasTotales.length === 0) {
+        throw new Error("No hay facturas seleccionadas para pagar.");
+      }
+
+      const total = facturasTotales.reduce((sum, f) => {
+        if (tab === "pendientes") return sum + Number(f.total || 0);
+        if (tab === "parcial") return sum + Number(f.total_restante || 0);
+        return sum;
+      }, 0);
+
+      if (total <= 0) {
+        throw new Error("El monto total a pagar es 0.");
+      }
+
+      const descripcion = `Pago facturas: ${facturasTotales
+        .map((f) => f.numero)
+        .join(", ")}`;
+
+      const { data, error } = await supabase.functions.invoke(
+        "rapid-processor",
+        {
+          body: {
+            monto: total,
+            descripcion,
+            id_cliente: cliente.id_cliente,
+            facturas: facturasTotales.map((f) => f.id_factura),
+          },
+        }
+      );
+
+      if (error) {
+        console.error("❌ Error en Edge Function:", error);
+        throw new Error(error.message || "Error en la función de pago");
+      }
+
+      console.log("RESPUESTA RAW:", data);
+
+      let parsed = data;
+      if (typeof parsed === "string") {
+        try {
+          parsed = JSON.parse(parsed);
+        } catch (e) {
+          console.error("❌ JSON inválido:", data);
+          throw new Error("Formato inválido recibido desde el servidor");
+        }
+      }
+
+      console.log("RESP PARSED:", parsed);
+
+      if (!parsed?.url) {
+        throw new Error("No se recibió una URL de pago");
+      }
+
+      // 👇 Redirección compatible con móvil
+      const url = parsed.url;
+      setTimeout(() => {
+        window.open(url, "_self");
+      }, 50);
+    } catch (error) {
+      console.error("ERROR REAL:", error);
+      alert(`Error creando el pago:\n${error.message}`);
+    } finally {
+      setLoadingPago(false);
+      if (payButtonRef.current) payButtonRef.current.disabled = false;
+    }
+  };
 
   //  UI principal
   return (
@@ -252,6 +335,7 @@ export default function Facturas({ cliente }) {
         <p className="text-sm md:text-base text-[#59656e] dark:text-[#ecf3f8] mt-1">
           Gestiona y paga tus facturas pendientes
         </p>
+
         <FacturasResumen
           cantidadPagadas={pagadas.length}
           cantidadPendiente={pendientes.length}
@@ -263,29 +347,32 @@ export default function Facturas({ cliente }) {
         <div className="mt-4 flex bg-transparent p-1 mb-5 transition-colors duration-300 max-w-96 gap-2">
           <button
             onClick={() => setTab("pendientes")}
-            className={`flex-1  p-2 rounded-sm text-xs sm:text-sm font-medium transition-colors duration-300 ${tab === "pendientes"
-              ? "bg-[#d30046] text-white"
-              : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700 "
-              }`}
+            className={`flex-1 p-2 rounded-sm text-xs sm:text-sm font-medium transition-colors duration-300 ${
+              tab === "pendientes"
+                ? "bg-[#d30046] text-white"
+                : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700 "
+            }`}
           >
             Pendientes ({pendientes.length})
           </button>
 
           <button
             onClick={() => setTab("parcial")}
-            className={`flex-1 p-2 rounded-sm text-xs sm:text-sm font-medium transition-colors duration-300 ${tab === "parcial"
-              ? "bg-[#d30046] text-white"
-              : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700"
-              }`}
+            className={`flex-1 p-2 rounded-sm text-xs sm:text-sm font-medium transition-colors duration-300 ${
+              tab === "parcial"
+                ? "bg-[#d30046] text-white"
+                : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700"
+            }`}
           >
             Parcial ({parcial.length})
           </button>
           <button
             onClick={() => setTab("pagadas")}
-            className={`flex-1 p-2 rounded-sm text-xs sm:text-sm font-medium transition-colors duration-300 ${tab === "pagadas"
-              ? "bg-[#d30046] text-white"
-              : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700 "
-              }`}
+            className={`flex-1 p-2 rounded-sm text-xs sm:text-sm font-medium transition-colors duration-300 ${
+              tab === "pagadas"
+                ? "bg-[#d30046] text-white"
+                : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700 "
+            }`}
           >
             Pagadas ({pagadas.length})
           </button>
@@ -293,10 +380,11 @@ export default function Facturas({ cliente }) {
 
         {/* Listado de Facturas */}
         {loading ? (
-          <p className="text-gray-500 dark:text-gray-400">Cargando facturas...</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            Cargando facturas...
+          </p>
         ) : (
           <>
-            {/* TAB Pendientes */}
             {tab === "pendientes" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -307,17 +395,20 @@ export default function Facturas({ cliente }) {
                       tracking={f.id_lote_facturacion?.substring(0, 8) || "—"}
                       monto={f.total?.toFixed(2)}
                       estado={f.estado}
-                      fecha={f.created_at.slice(0, 10).split("-").reverse().join(" / ")}
+                      fecha={f.created_at
+                        .slice(0, 10)
+                        .split("-")
+                        .reverse()
+                        .join(" / ")}
                       isSelected={selected.includes(f.numero)}
                       onToggleSelect={(codigo) => {
-                        setSelected(prev =>
+                        setSelected((prev) =>
                           prev.includes(codigo)
-                            ? prev.filter(id => id !== codigo)
+                            ? prev.filter((id) => id !== codigo)
                             : [...prev, codigo]
                         );
                       }}
                       onViewClick={() => fetchFacturaDetalle(f.id_factura)}
-
                       onPayClick={(codigo) => {
                         setSelected([codigo]);
                         setEsPagoParcial(false);
@@ -329,7 +420,6 @@ export default function Facturas({ cliente }) {
               </div>
             )}
 
-            {/* TAB Pagadas */}
             {tab === "pagadas" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {pagadas.map((f) => (
@@ -346,7 +436,6 @@ export default function Facturas({ cliente }) {
               </div>
             )}
 
-            {/* TAB Parcial */}
             {tab === "parcial" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {parcial.map((f) => (
@@ -370,24 +459,22 @@ export default function Facturas({ cliente }) {
           </>
         )}
 
-        {/*  Modal de Detalle */}
+        {/* Modal Detalle */}
         {detalleVisible && facturaDetalle && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center z-50 ">
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-50">
-              <div className="relative w-full max-w-lg max-h-[90vh] sm:max-h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent rounded-2xl">
-                <DetalleFactura factura={facturaDetalle} onClose={() => setDetalleVisible(false)} />
-              </div>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-50">
+            <div className="relative w-full max-w-lg max-h-[90vh] sm:max-h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent rounded-2xl">
+              <DetalleFactura
+                factura={facturaDetalle}
+                onClose={() => setDetalleVisible(false)}
+              />
             </div>
           </div>
         )}
+
+        {/* Modal tipo de pago */}
         {modalTipoPago && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center 
-                  items-end md:items-center z-9999">
-
-            <div className="bg-white dark:bg-[#01060c] dark:text-gray-100 
-                w-full md:w-[400px] p-6 rounded-t-3xl md:rounded-3xl shadow-xl relative z-10000">
-
-
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-end md:items-center z-[9999]">
+            <div className="bg-white dark:bg-[#01060c] dark:text-gray-100 w-full md:w-[400px] p-6 rounded-t-3xl md:rounded-3xl shadow-xl relative">
               <button
                 onClick={() => {
                   setModalTipoPago(false);
@@ -415,7 +502,7 @@ export default function Facturas({ cliente }) {
           </div>
         )}
 
-
+        {/* Modales de pago */}
         {preview && (
           <>
             {esPagoParcial ? (
@@ -458,7 +545,6 @@ export default function Facturas({ cliente }) {
                                   ? Number(f.total).toFixed(2)
                                   : Number(f.total_restante).toFixed(2)}
                               </p>
-
                             </div>
 
                             <input
@@ -492,14 +578,18 @@ export default function Facturas({ cliente }) {
                               onBlur={(e) => {
                                 const num = parseFloat(e.target.value);
                                 if (!isNaN(num)) {
-                                  const limitado = Math.min(Math.max(num, 0), f.total);
+                                  const limitado = Math.min(
+                                    Math.max(num, 0),
+                                    f.total
+                                  );
                                   setFacturas((prev) =>
                                     prev.map((fact) =>
                                       fact.numero === f.numero
                                         ? {
-                                          ...fact,
-                                          montoParcial: limitado.toFixed(2),
-                                        }
+                                            ...fact,
+                                            montoParcial:
+                                              limitado.toFixed(2),
+                                          }
                                         : fact
                                     )
                                   );
@@ -538,11 +628,13 @@ export default function Facturas({ cliente }) {
                       for (const f of facturasParciales) {
                         const monto = parseFloat(f.montoParcial);
                         const totalPagado = (f.total_pagado || 0) + monto;
-                        const totalRestante = Math.max(f.total - totalPagado, 0);
+                        const totalRestante = Math.max(
+                          f.total - totalPagado,
+                          0
+                        );
                         const nuevoEstado =
                           totalRestante > 0 ? "parcial" : "pagado";
 
-                        // ✅ Actualiza la factura
                         const { error: updateError } = await supabase
                           .from("tb_factura")
                           .update({
@@ -560,7 +652,6 @@ export default function Facturas({ cliente }) {
                           continue;
                         }
 
-                        // ✅ Inserta el pago parcial
                         const { error: pagoError } = await supabase
                           .from("tb_pago_factura")
                           .insert([
@@ -569,7 +660,7 @@ export default function Facturas({ cliente }) {
                               id_cliente: cliente.id_cliente,
                               monto: monto.toFixed(2),
                               id_metodo_pago:
-                                "a9600036-34e9-4ab0-883a-fad419195875", // 💳 método fijo o dinámico
+                                "a9600036-34e9-4ab0-883a-fad419195875",
                               observacion: `Pago parcial de factura ${f.numero}`,
                               fecha_pago: new Date().toISOString(),
                             },
@@ -603,178 +694,108 @@ export default function Facturas({ cliente }) {
                 </div>
               </div>
             ) : (
-              <>
-                {/* ✅ Modal de PAGO TOTAL */}
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-end md:items-center z-50 ">
-                  <div className=" bg-white dark:bg-[#040c13] w-full md:w-[400px] rounded-t-3xl md:rounded-3xl p-6 shadow-2xl relative">
-                    <button
-                      onClick={() => setPreview(false)}
-                      className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                    >
-                      <X size={20} />
-                    </button>
-                    <div className="flex gap-2 items-center mb-2">
-                      <CreditCard className="w-6 h-6" />
-                      <h3 className="text-2xl font-semibold text-center text-[#040c13] dark:text-white ">
-                        Pagar factura
-                      </h3>
-                    </div>
+              // ✅ Modal de PAGO TOTAL
+              <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-end md:items-center z-50">
+                <div className="bg-white dark:bg-[#040c13] w-full md:w-[400px] rounded-t-3xl md:rounded-3xl p-6 shadow-2xl relative">
+                  <button
+                    onClick={() => setPreview(false)}
+                    className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  >
+                    <X size={20} />
+                  </button>
+                  <div className="flex gap-2 items-center mb-2">
+                    <CreditCard className="w-6 h-6" />
+                    <h3 className="text-2xl font-semibold text-center text-[#040c13] dark:text-white">
+                      Pagar factura
+                    </h3>
+                  </div>
 
-                    <div className="text-sm text-gray-500 dark:text-gray-400 text-start mb-5">
-                      <p className="text-sm text-gray-500 dark:text-gray-400 text-start mb-5">
-                        Factura:{" "}
-                        {facturasSeleccionadas
-                          .filter((f) => selected.includes(f.numero))
-                          .map((f) => f.numero)
-                          .join(", ")}
-                      </p>
-                    </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 text-start mb-5">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-start mb-5">
+                      Factura:{" "}
+                      {facturasSeleccionadas
+                        .filter((f) => selected.includes(f.numero))
+                        .map((f) => f.numero)
+                        .join(", ")}
+                    </p>
+                  </div>
 
-
-                    <div className="flex flex-col bg-linear-to-r from-orange-500 to-pink-500 rounded-2xl p-4 text-white">
-                      <span className="text-sm opacity-90">Total a Pagar</span>
-                      <span className="text-3xl font-bold mt-1">
-                        $
-                        {facturasSeleccionadas
-                          .filter((f) => selected.includes(f.numero))
-                          .reduce((sum, f) => {
-                            // Si estoy en PENDIENTES → total
-                            if (tab === "pendientes") {
-                              return sum + (Number(f.total) || 0);
-                            }
-
-                            // Si estoy en PARCIAL → restante
-                            if (tab === "parcial") {
-                              return sum + (Number(f.total_restante) || 0);
-                            }
-
-                            return sum;
-                          }, 0)
-                          .toFixed(2)}
-                      </span>
-
-                    </div>
-
-                    <div className="flex justify-around gap-3 mt-6">
-                      {/* ❌ OCULTAR BOTÓN PAGO PARCIAL CUANDO loadingPago ESTÁ TRUE */}
-                      {!loadingPago && (
-                        <button
-                          onClick={() => {
-                            setEsPagoParcial(true);
-                            setModalTipoPago(false);
-                            setPreview(true);
-                          }}
-                          className="flex items-center justify-center px-6 py-2.5 rounded-full border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-all"
-                        >
-                          Pago Parcial
-                        </button>
-                      )}
-
-                      {/* ⭐ BOTÓN DE PAGO TOTAL CON LOADER */}
-                      <button
-                        onClick={async () => {
-                          setLoadingPago(true);
-                          const btn = document.querySelector("#pago-btn");
-                          btn.disabled = true;
-
-                          try {
-                            const facturasTotales = facturasSeleccionadas.filter((f) =>
-                              selected.includes(f.numero)
-                            );
-
-                            const total = facturasTotales.reduce((sum, f) => {
-                              if (tab === "pendientes") return sum + Number(f.total);
-                              if (tab === "parcial") return sum + Number(f.total_restante);
-                              return sum;
-                            }, 0);
-
-                            const descripcion = `Pago facturas: ${facturasTotales
-                              .map(f => f.numero)
-                              .join(", ")}`;
-
-                            const resp = await supabase.functions.invoke("rapid-processor", {
-                              body: {
-                                monto: total,
-                                descripcion,
-                                id_cliente: cliente.id_cliente,
-                                facturas: facturasTotales.map(f => f.id_factura)
-                              }
-                            });
-
-                            console.log("RAW:", resp);
-
-                            if (!resp.data) throw new Error("Sin data devuelta por el servidor");
-
-                            let parsed;
-                            try {
-                              parsed = JSON.parse(resp.data);
-                            } catch {
-                              throw new Error("JSON inválido desde la función");
-                            }
-
-                            console.log("PARSED:", parsed);
-
-                            if (!parsed.url) throw new Error("No se recibió URL de pago");
-
-                            // 🚀 Redirección compatible con móvil
-                            window.location.assign(parsed.url);
-                            return;
-
-                          } catch (error) {
-                            alert("Error creando el pago:\n" + error.message);
-                            console.error(error);
-                          } finally {
-                            setLoadingPago(false);
-                            btn.disabled = false;
+                  <div className="flex flex-col bg-linear-to-r from-orange-500 to-pink-500 rounded-2xl p-4 text-white">
+                    <span className="text-sm opacity-90">Total a Pagar</span>
+                    <span className="text-3xl font-bold mt-1">
+                      $
+                      {facturasSeleccionadas
+                        .filter((f) => selected.includes(f.numero))
+                        .reduce((sum, f) => {
+                          if (tab === "pendientes") {
+                            return sum + (Number(f.total) || 0);
                           }
+                          if (tab === "parcial") {
+                            return sum + (Number(f.total_restante) || 0);
+                          }
+                          return sum;
+                        }, 0)
+                        .toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-around gap-3 mt-6">
+                    {!loadingPago && (
+                      <button
+                        onClick={() => {
+                          setEsPagoParcial(true);
+                          setModalTipoPago(false);
+                          setPreview(true);
                         }}
+                        className="flex items-center justify-center px-6 py-2.5 rounded-full border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-all"
                       >
-                        {loadingPago ? (
-                          <div className="flex items-center gap-2">
-                            <svg
-                              className="animate-spin h-4 text-white"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                              ></path>
-                            </svg>
-                            Procesando...
-                          </div>
-                        ) : (
-                          "Pago total"
-                        )}
+                        Pago Parcial
                       </button>
+                    )}
 
-                    </div>
-
-
-
+                    <button
+                      ref={payButtonRef}
+                      onClick={handlePagoTotal}
+                      className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium text-white bg-linear-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={loadingPago}
+                    >
+                      {loadingPago ? (
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className="animate-spin h-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                            ></path>
+                          </svg>
+                          Procesando...
+                        </div>
+                      ) : (
+                        "Pago total"
+                      )}
+                    </button>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </>
         )}
-
-
-
-
       </main>
 
       {showBottom && <BottomNav />}
-    </div >
+    </div>
   );
 }
