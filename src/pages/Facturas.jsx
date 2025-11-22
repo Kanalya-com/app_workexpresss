@@ -669,7 +669,6 @@ export default function Facturas({ cliente }) {
                       {/* Pagar ahora */}
                       <button
                         onClick={async () => {
-                          // Deshabilitar el botón mientras se espera la respuesta
                           const button = document.querySelector("#pago-btn");
                           button.disabled = true;
 
@@ -683,38 +682,44 @@ export default function Facturas({ cliente }) {
                             return sum;
                           }, 0);
 
-                          // Invocar la función para crear el pago
-                          
-                          const { data, error } = await supabase.functions.invoke("rapid-processor", {
-                            body: {
-                              monto: total,
-                              descripcion: `Pago facturas: ${facturasTotales.map((f) => f.numero).join(", ")}`,
-                              id_cliente: cliente.id_cliente,
-                              facturas: facturasTotales.map((f) => f.id_factura),
-                            },
-                          });
-                          console.log("RESPUESTA COMPLETA:", resp);
-                          if (error) {
-                            console.error("❌ Error creando pago:", error);
-                            alert("Hubo un error al crear el pago. Por favor, intenta nuevamente.");
-                            button.disabled = false; // Habilitar el botón si ocurre un error
+                          const descripcion = `Pago facturas: ${facturasTotales
+                            .map(f => f.numero)
+                            .join(", ")}`;
+
+                          let resp;
+
+                          try {
+                            resp = await supabase.functions.invoke("rapid-processor", {
+                              body: {
+                                monto: total,
+                                descripcion,
+                                id_cliente: cliente.id_cliente,
+                                facturas: facturasTotales.map(f => f.id_factura)
+                              }
+                            });
+                          } catch (e) {
+                            console.error("❌ ERROR INVOKE:", e);
+                            alert("Error creando pago.");
+                            button.disabled = false;
                             return;
                           }
 
-                          // Redirigir a la URL de pago de Tilopay
-                          if (data?.url) {
-                            window.location.href = data.url;
+                          console.log("RESPUESTA FUNCIÓN:", resp);
+
+                          if (resp?.data?.url) {
+                            window.location.href = resp.data.url;
                           } else {
-                            alert("No se pudo obtener la URL de pago. Intenta nuevamente.");
+                            alert("No se pudo obtener la URL de pago.");
                           }
 
-                          button.disabled = false; // Habilitar el botón después de redirigir
+                          button.disabled = false;
                         }}
                         className="flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-medium text-white bg-linear-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 transition-all shadow-sm"
                         id="pago-btn"
                       >
                         Pago total
                       </button>
+
 
 
                     </div>
