@@ -684,7 +684,8 @@ export default function Facturas({ cliente }) {
                           }, 0);
 
                           // Invocar la función para crear el pago
-                          const { data, error } = await supabase.functions.invoke("tilopay", {
+                          
+                          const { data, error } = await supabase.functions.invoke("rapid-processor", {
                             body: {
                               monto: total,
                               descripcion: `Pago facturas: ${facturasTotales.map((f) => f.numero).join(", ")}`,
