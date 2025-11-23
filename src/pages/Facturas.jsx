@@ -370,7 +370,7 @@ async function refrescarFacturas() {
             monto: total,
             descripcion,
             id_cliente: cliente.id_cliente,
-            facturas: facturasTotales.map((f) => f.id_factura),
+            id_factura: facturasTotales.map((f) => f.id_factura),
           },
         }
       );
