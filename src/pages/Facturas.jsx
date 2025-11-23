@@ -30,7 +30,6 @@ export default function Facturas({ cliente }) {
     message: ""
   });
 
-  // Detectar retorno de Tilopay
 // 🚀 Detectar retorno de Tilopay (solo UI, el webhook hace el proceso real)
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);
