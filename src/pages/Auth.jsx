@@ -125,7 +125,7 @@ export default function Auth() {
     try {
       setLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://app-prueba-wokrexpress.netlify.app/reset-password",
+        redirectTo: "https://app-workexpress.netlify.app/reset-password",
       });
       setLoading(false);
 

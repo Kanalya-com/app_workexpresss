@@ -32,39 +32,67 @@ export default function Facturas({ cliente }) {
 
 //  Detectar retorno de Tilopay (solo UI, el webhook hace el proceso real)
 useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get("code");
-  const wpCancel = params.get("wp_cancel");
+  const run = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const wpCancel = params.get("wp_cancel");
+    const order = params.get("order") || params.get("order_id") || params.get("reference");
 
-  // ✅ Pago aprobado
-  if (code === "1") {
-    setPopupTilopay({
-      show: true,
-      type: "success",
-      message: "Pago realizado con éxito. Actualizando tus facturas..."
-    });
+    // ✅ Pago aprobado
+    if (code === "1") {
 
-    refrescarFacturas();
+      // 👉 llamar a tu función que procesa el pago EN EL SERVIDOR
+      if (order) {
+        try {
+          console.log("🔧 Enviando order a swift-responder:", order);
 
-    setTimeout(() => {
-      window.history.replaceState({}, document.title, "/facturas");
-    }, 200);
-    return; // <- Salir
-  }
+          const { data, error } = await supabase.functions.invoke("swift-responder", {
+            body: { order }
+          });
 
-  // ❌ Pago cancelado (Tilopay no manda code=0)
-  if (wpCancel === "yes") {
-    setPopupTilopay({
-      show: true,
-      type: "cancel",
-      message: "El pago fue cancelado antes de completarse."
-    });
+          if (error) {
+            console.error("❌ Error desde swift-responder:", error);
+          } else {
+            console.log("✅ swift-responder ejecutado correctamente:", data);
+          }
+        } catch (err) {
+          console.error("❌ Error ejecutando swift-responder:", err);
+        }
+      }
 
-    setTimeout(() => {
-      window.history.replaceState({}, document.title, "/facturas");
-    }, 200);
-  }
+      // UI y refrescar
+      setPopupTilopay({
+        show: true,
+        type: "success",
+        message: "Pago realizado con éxito. Actualizando tus facturas..."
+      });
+
+      await refrescarFacturas();
+
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, "/facturas");
+      }, 200);
+
+      return;
+    }
+
+    // ❌ Pago cancelado
+    if (wpCancel === "yes") {
+      setPopupTilopay({
+        show: true,
+        type: "cancel",
+        message: "El pago fue cancelado antes de completarse."
+      });
+
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, "/facturas");
+      }, 200);
+    }
+  };
+
+  run();
 }, []);
+
 
 
 // 🔄 Función para refrescar facturas directamente desde BD
