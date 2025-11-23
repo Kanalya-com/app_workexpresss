@@ -38,29 +38,18 @@ useEffect(() => {
     const wpCancel = params.get("wp_cancel");
     const order = params.get("order") || params.get("order_id") || params.get("reference");
 
-    // ✅ Pago aprobado
     if (code === "1") {
 
-      // 👉 llamar a tu función que procesa el pago EN EL SERVIDOR
       if (order) {
-        try {
-          console.log("🔧 Enviando order a swift-responder:", order);
-
-          const { data, error } = await supabase.functions.invoke("swift-responder", {
-            body: { order }
-          });
-
-          if (error) {
-            console.error("❌ Error desde swift-responder:", error);
-          } else {
-            console.log("✅ swift-responder ejecutado correctamente:", data);
+        await supabase.functions.invoke("swift-responder", {
+          body: {
+            order,
+            code: 1,
+            transaction: params.get("tilopay-transaction")
           }
-        } catch (err) {
-          console.error("❌ Error ejecutando swift-responder:", err);
-        }
+        });
       }
 
-      // UI y refrescar
       setPopupTilopay({
         show: true,
         type: "success",
@@ -76,7 +65,6 @@ useEffect(() => {
       return;
     }
 
-    // ❌ Pago cancelado
     if (wpCancel === "yes") {
       setPopupTilopay({
         show: true,
@@ -92,6 +80,7 @@ useEffect(() => {
 
   run();
 }, []);
+
 
 
 
@@ -370,7 +359,7 @@ async function refrescarFacturas() {
             monto: total,
             descripcion,
             id_cliente: cliente.id_cliente,
-            id_factura: facturasTotales.map((f) => f.id_factura),
+            id_factura: facturasTotales[0].id_factura,
           },
         }
       );
