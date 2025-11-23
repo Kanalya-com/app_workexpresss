@@ -34,30 +34,31 @@ export default function Facturas({ cliente }) {
 // 🚀 Detectar retorno de Tilopay (solo UI, el webhook hace el proceso real)
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);
-  const code = params.get("code");   
+  const code = params.get("code");
+  const wpCancel = params.get("wp_cancel");
 
+  // ✅ Pago aprobado
   if (code === "1") {
-    // El webhook ya actualizó en backend
     setPopupTilopay({
       show: true,
       type: "success",
       message: "Pago realizado con éxito. Actualizando tus facturas..."
     });
 
-    // 🔄 Refrescar facturas desde Supabase
     refrescarFacturas();
 
-    // Limpiar URL
     setTimeout(() => {
       window.history.replaceState({}, document.title, "/facturas");
     }, 200);
+    return; // <- Salir
   }
 
-  if (code === "0") {
+  // ❌ Pago cancelado (Tilopay no manda code=0)
+  if (wpCancel === "yes") {
     setPopupTilopay({
       show: true,
       type: "cancel",
-      message: "El pago no fue completado."
+      message: "El pago fue cancelado antes de completarse."
     });
 
     setTimeout(() => {
@@ -65,6 +66,7 @@ useEffect(() => {
     }, 200);
   }
 }, []);
+
 
 // 🔄 Función para refrescar facturas directamente desde BD
 async function refrescarFacturas() {
