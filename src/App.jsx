@@ -89,7 +89,7 @@ function App() {
               }
             />
             <Route
-              path="/Recivo-factura"
+              path="/recivo-factura/:id"
               element={
                 <PrivateRoute>
                   <RecivoFactura/>
