@@ -407,23 +407,17 @@ export default function Facturas({ cliente }) {
     if (payButtonRef.current) payButtonRef.current.disabled = true;
 
     try {
-      // Filtrar SOLO la factura con monto parcial válido
-      const facturasParciales = facturasSeleccionadas.filter(
-        (f) =>
-          selected.includes(f.numero) &&
-          parseFloat(f.montoParcial) > 0
-      );
+      const f = facturasSeleccionadas[0];
 
-      if (facturasParciales.length === 0) {
-        throw new Error("Debes ingresar al menos un monto parcial.");
+      // 1️⃣ Determinar monto correcto según ESTADO
+      const monto =
+        tab === "parcial"
+          ? Number(f.total_restante)                // si ya es parcial → paga solo el saldo
+          : Number(f.montoParcial || 0);            // si es pendiente → usa input del usuario
+
+      if (!monto || monto <= 0) {
+        throw new Error("El monto del pago parcial debe ser mayor a 0.");
       }
-
-      if (facturasParciales.length > 1) {
-        throw new Error("Solo puedes realizar pago parcial de UNA factura a la vez.");
-      }
-
-      const f = facturasParciales[0];
-      const monto = parseFloat(f.montoParcial);
 
       const { data, error } = await supabase.functions.invoke(
         "rapid-processor",
@@ -443,10 +437,7 @@ export default function Facturas({ cliente }) {
         throw new Error(error.message || "Error creando el pago parcial");
       }
 
-      let parsed = data;
-      if (typeof parsed === "string") {
-        parsed = JSON.parse(parsed);
-      }
+      let parsed = typeof data === "string" ? JSON.parse(data) : data;
 
       if (!parsed?.url) {
         throw new Error("Tilopay no devolvió URL de pago.");
@@ -464,6 +455,7 @@ export default function Facturas({ cliente }) {
       if (payButtonRef.current) payButtonRef.current.disabled = false;
     }
   };
+
 
   //  UI principal
   return (
@@ -716,24 +708,25 @@ export default function Facturas({ cliente }) {
                               }}
                               onBlur={(e) => {
                                 const num = parseFloat(e.target.value);
-                                if (!isNaN(num)) {
-                                  const limitado = Math.min(
-                                    Math.max(num, 0),
-                                    f.total
-                                  );
-                                  setFacturas((prev) =>
-                                    prev.map((fact) =>
-                                      fact.numero === f.numero
-                                        ? {
-                                          ...fact,
-                                          montoParcial:
-                                            limitado.toFixed(2),
-                                        }
-                                        : fact
-                                    )
-                                  );
-                                }
+                                if (isNaN(num)) return;
+
+                                // 💡 Si la factura es PARCIAL → limite = total_restante
+                                const limiteReal =
+                                  tab === "parcial"
+                                    ? Number(f.total_restante)
+                                    : Number(f.total);
+
+                                const limitado = Math.min(Math.max(num, 0), limiteReal);
+
+                                setFacturas((prev) =>
+                                  prev.map((fact) =>
+                                    fact.numero === f.numero
+                                      ? { ...fact, montoParcial: limitado.toFixed(2) }
+                                      : fact
+                                  )
+                                );
                               }}
+
                               className="w-28 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-right focus:border-[#b71f4b] dark:focus:border-[#f2af1e] focus:ring-0 shadow-sm"
                               placeholder="0.00"
                             />
