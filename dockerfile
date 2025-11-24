@@ -1,0 +1,34 @@
+FROM node:20-alpine AS build
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_API_KEY
+ARG VITE_API_ENDPOINT
+ARG VITE_BASE_URL
+ARG TILOPAY_API_KEY
+ARG TILOPAY_USER
+ARG TILOPAY_PASS
+
+RUN VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
+    VITE_SUPABASE_ANON_KEY="$VITE_SUPABASE_ANON_KEY" \
+    VITE_API_KEY="$VITE_API_KEY" \
+    VITE_API_ENDPOINT="$VITE_API_ENDPOINT" \
+    VITE_BASE_URL="$VITE_BASE_URL" \
+    TILOPAY_API_KEY="$TILOPAY_API_KEY" \
+    TILOPAY_USER="$TILOPAY_USER" \
+    TILOPAY_PASS="$TILOPAY_PASS" \
+    npm run build
+
+FROM nginx:alpine
+
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

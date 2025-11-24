@@ -1,0 +1,111 @@
+name: Deploy App to Production
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_PAT }}
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build \
+            --build-arg VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }} \
+            --build-arg VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }} \
+            --build-arg VITE_API_KEY=${{ secrets.VITE_API_KEY }} \
+            --build-arg VITE_API_ENDPOINT=${{ secrets.VITE_API_ENDPOINT }} \
+            --build-arg VITE_BASE_URL=${{ secrets.VITE_BASE_URL }} \
+            --build-arg TILOPAY_API_KEY=${{ secrets.TILOPAY_API_KEY }} \
+            --build-arg TILOPAY_USER=${{ secrets.TILOPAY_USER }} \
+            --build-arg TILOPAY_PASS=${{ secrets.TILOPAY_PASS }} \
+            -t ghcr.io/kanalya-com/app_workexpress:${{ github.sha }} \
+            -t ghcr.io/kanalya-com/app_workexpress:latest .
+          
+          docker push ghcr.io/kanalya-com/app_workexpress:${{ github.sha }}
+          docker push ghcr.io/kanalya-com/app_workexpress:latest
+
+  deploy:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            cd /opt/app_workexpresss
+            
+            git fetch --all
+            git reset --hard origin/main
+            
+            echo '${{ secrets.GH_PAT }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+            
+            docker pull ghcr.io/kanalya-com/app_workexpress:latest
+            
+            if docker ps --format "table {{.Names}}" | grep -q "app_workexpress_blue"; then
+              CURRENT_COLOR="blue"
+              NEW_COLOR="green"
+            else
+              CURRENT_COLOR="green" 
+              NEW_COLOR="blue"
+            fi
+            
+            CURRENT_IMAGE=$(docker inspect app_workexpress_$CURRENT_COLOR --format '{{.Config.Image}}' 2>/dev/null || echo "none")
+
+            rollback() {
+              if [ "$CURRENT_IMAGE" != "none" ]; then
+                docker compose stop app-$NEW_COLOR
+                docker compose up -d app-$CURRENT_COLOR
+                sleep 10
+
+                if docker inspect app_workexpress_$CURRENT_COLOR --format '{{.State.Health.Status}}' 2>/dev/null | grep -q "healthy"; then
+                  echo "Rollback successful - $CURRENT_COLOR is healthy"
+                else
+                  echo "Rollback failed - check logs manually"
+                  docker logs --tail 50 app_workexpress_$CURRENT_COLOR
+                fi
+              fi
+              
+              exit 1
+            }
+            
+            docker compose up -d --remove-orphans app-$NEW_COLOR
+            
+            COUNTER=0
+            while [ $COUNTER -lt 120 ]; do
+              STATUS=$(docker inspect app_workexpress_$NEW_COLOR --format '{{.State.Health.Status}}' 2>/dev/null || echo "none")
+              
+              if [ "$STATUS" = "healthy" ]; then
+                break
+              fi
+              
+              if [ $COUNTER -ge 120 ]; then
+                docker logs --tail 100 app_workexpress_$NEW_COLOR
+                rollback
+              fi
+              
+              COUNTER=$((COUNTER + 5))
+              sleep 5
+            done
+       
+            docker compose stop app-$CURRENT_COLOR
+
+            sleep 15
+
+            docker image prune -f
+            docker container prune -f
+          EOF
