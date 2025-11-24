@@ -22,6 +22,74 @@ import Login from "../component/Login";
 import { ThemeProvider } from "../component/ThemeProvider";
 export default function Auth() {
   const navigate = useNavigate();
+  const [popup, setPopup] = useState({ show: false, message: "", type: "success" });
+  const [showPopup, setShowPopup] = useState(false);
+  const [isRegister, setIsRegister] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState("");
+  const [showPasswordStep, setShowPasswordStep] = useState(false);
+  const [sucursales, setSucursales] = useState([]);
+  const [planes, setPlanes] = useState([]);
+  const [form, setForm] = useState({
+    nombre: "",
+    correo_principal: "",
+    apellido: "",
+    telefono: "",
+    cedula: "",
+    direccion: "",
+    sucursal_preferida: "",
+    plan: "",
+    password: "",
+  });
+  useEffect(() => {
+    const savedForm = localStorage.getItem("workexpress_form");
+    if (savedForm) {
+      try {
+        const parsed = JSON.parse(savedForm);
+        // Si detecta un id viejo, lo limpia
+        if (parsed.plan && parsed.plan.includes("_")) parsed.plan = "";
+        setForm(parsed);
+      } catch (err) {
+        console.warn("Error restaurando formulario:", err);
+      }
+    }
+  }, []);
+  useEffect(() => {
+    const fetchSucursales = async () => {
+      const { data, error } = await supabase
+        .from("tb_sucursal")
+        .select("nombre, id_sucursal")
+        .eq("estado", true);
+
+      if (error) console.error("Error cargando sucursales:", error);
+      else setSucursales(data || []);
+    };
+
+    const fetchPlanes = async () => {
+      const { data, error } = await supabase
+        .from("tb_plan")
+        .select("id_plan, descripcion, id_sucursal, precio, beneficios, estado_plan");
+
+      if (error) console.error("❌ Error cargando planes:", error.message);
+
+      else setPlanes(data);
+
+    };
+
+    fetchSucursales();
+    fetchPlanes();
+  }, []);
+
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+
+
   // 🔹 LOGIN
   const handleLogin = async (email, password) => {
     setLoading(true);

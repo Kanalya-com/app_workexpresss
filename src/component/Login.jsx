@@ -13,7 +13,7 @@ export default function Login({ onLogin, onNavigate, onForgotPassword, onRegiste
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [view, setView] = useState("login"); // 👈 controla qué pantalla mostrar
+  const [view, setView] = useState("login"); // qué pantalla mostrar
 
   const handleSubmit = (e) => {
     e.preventDefault();
