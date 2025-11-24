@@ -72,7 +72,7 @@ jobs:
                 docker compose up -d app-$CURRENT_COLOR
                 sleep 10
 
-                if docker inspect app_workexpress_$CURRENT_COLOR --format '{{.State.Health.Status}}' 2/dev/null | grep -q "healthy"; then
+                if docker inspect app_workexpress_$CURRENT_COLOR --format '{{.State.Health.Status}}' 2>/dev/null | grep -q "healthy"; then
                   echo "Rollback successful - $CURRENT_COLOR is healthy"
                 else
                   echo "Rollback failed - check logs manually"
