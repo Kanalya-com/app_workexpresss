@@ -30,74 +30,74 @@ export default function Facturas({ cliente }) {
     message: ""
   });
 
-//  Detectar retorno de Tilopay (solo UI, el webhook hace el proceso real)
-useEffect(() => {
-  const run = async () => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    const wpCancel = params.get("wp_cancel");
-    const order = params.get("order") || params.get("order_id") || params.get("reference");
+  //  Detectar retorno de Tilopay (solo UI, el webhook hace el proceso real)
+  useEffect(() => {
+    const run = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      const wpCancel = params.get("wp_cancel");
+      const order = params.get("order") || params.get("order_id") || params.get("reference");
 
-    if (code === "1") {
+      if (code === "1") {
 
-      if (order) {
-        await supabase.functions.invoke("swift-responder", {
-          body: {
-            order,
-            code: 1,
-            transaction: params.get("tilopay-transaction")
-          }
+        if (order) {
+          await supabase.functions.invoke("swift-responder", {
+            body: {
+              order,
+              code: 1,
+              transaction: params.get("tilopay-transaction")
+            }
+          });
+        }
+
+        setPopupTilopay({
+          show: true,
+          type: "success",
+          message: "Pago realizado con éxito. Actualizando tus facturas..."
         });
+
+        await refrescarFacturas();
+
+        setTimeout(() => {
+          window.history.replaceState({}, document.title, "/facturas");
+        }, 200);
+
+        return;
       }
 
-      setPopupTilopay({
-        show: true,
-        type: "success",
-        message: "Pago realizado con éxito. Actualizando tus facturas..."
-      });
+      if (wpCancel === "yes") {
+        setPopupTilopay({
+          show: true,
+          type: "cancel",
+          message: "El pago fue cancelado antes de completarse."
+        });
 
-      await refrescarFacturas();
+        setTimeout(() => {
+          window.history.replaceState({}, document.title, "/facturas");
+        }, 200);
+      }
+    };
 
-      setTimeout(() => {
-        window.history.replaceState({}, document.title, "/facturas");
-      }, 200);
+    run();
+  }, []);
 
-      return;
+
+
+
+  // 🔄 Función para refrescar facturas directamente desde BD
+  async function refrescarFacturas() {
+    try {
+      const { data } = await supabase
+        .from("tb_factura")
+        .select("*")
+        .eq("id_cliente", cliente?.id_cliente)
+        .order("created_at", { ascending: false });
+
+      setFacturas(data || []);
+    } catch (err) {
+      console.error("❌ Error refrescando facturas:", err);
     }
-
-    if (wpCancel === "yes") {
-      setPopupTilopay({
-        show: true,
-        type: "cancel",
-        message: "El pago fue cancelado antes de completarse."
-      });
-
-      setTimeout(() => {
-        window.history.replaceState({}, document.title, "/facturas");
-      }, 200);
-    }
-  };
-
-  run();
-}, []);
-
-
-
-
-// 🔄 Función para refrescar facturas directamente desde BD
-async function refrescarFacturas() {
-  try {
-    const { data } = await supabase
-      .from("tb_factura")
-      .select("*")
-      .eq("id_cliente", cliente?.id_cliente)
-      .order("created_at", { ascending: false });
-
-    setFacturas(data || []);
-  } catch (err) {
-    console.error("❌ Error refrescando facturas:", err);
   }
-}
 
 
 
@@ -426,8 +426,8 @@ async function refrescarFacturas() {
           <button
             onClick={() => setTab("pendientes")}
             className={`flex-1 p-2 rounded-sm text-xs sm:text-sm font-medium transition-colors duration-300 ${tab === "pendientes"
-                ? "bg-[#d30046] text-white"
-                : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700 "
+              ? "bg-[#d30046] text-white"
+              : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700 "
               }`}
           >
             Pendientes ({pendientes.length})
@@ -436,8 +436,8 @@ async function refrescarFacturas() {
           <button
             onClick={() => setTab("parcial")}
             className={`flex-1 p-2 rounded-sm text-xs sm:text-sm font-medium transition-colors duration-300 ${tab === "parcial"
-                ? "bg-[#d30046] text-white"
-                : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700"
+              ? "bg-[#d30046] text-white"
+              : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700"
               }`}
           >
             Parcial ({parcial.length})
@@ -445,8 +445,8 @@ async function refrescarFacturas() {
           <button
             onClick={() => setTab("pagadas")}
             className={`flex-1 p-2 rounded-sm text-xs sm:text-sm font-medium transition-colors duration-300 ${tab === "pagadas"
-                ? "bg-[#d30046] text-white"
-                : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700 "
+              ? "bg-[#d30046] text-white"
+              : "text-[#01060c] dark:text-white cursor-pointer hover:bg-[#d30046]/50 border border-gray-200 dark:border-gray-700 "
               }`}
           >
             Pagadas ({pagadas.length})
@@ -694,71 +694,72 @@ async function refrescarFacturas() {
 
                   <button
                     onClick={async () => {
-                      const facturasParciales = facturasSeleccionadas.filter(
-                        (f) =>
-                          selected.includes(f.numero) &&
-                          parseFloat(f.montoParcial) > 0
-                      );
+                      const facturasParciales = facturasSeleccionadas
+                        .filter((f) => selected.includes(f.numero) && parseFloat(f.montoParcial) > 0);
 
-                      for (const f of facturasParciales) {
-                        const monto = parseFloat(f.montoParcial);
-                        const totalPagado = (f.total_pagado || 0) + monto;
-                        const totalRestante = Math.max(
-                          f.total - totalPagado,
-                          0
-                        );
-                        const nuevoEstado =
-                          totalRestante > 0 ? "parcial" : "pagado";
-
-                        const { error: updateError } = await supabase
-                          .from("tb_factura")
-                          .update({
-                            total_pagado: totalPagado.toFixed(2),
-                            total_restante: totalRestante.toFixed(2),
-                            estado: nuevoEstado,
-                          })
-                          .eq("id_factura", f.id_factura);
-
-                        if (updateError) {
-                          console.error(
-                            `❌ Error actualizando ${f.numero}:`,
-                            updateError.message
-                          );
-                          continue;
-                        }
-
-                        const { error: pagoError } = await supabase
-                          .from("tb_pago_factura")
-                          .insert([
-                            {
-                              id_factura: f.id_factura,
-                              id_cliente: cliente.id_cliente,
-                              monto: monto.toFixed(2),
-                              id_metodo_pago:
-                                "a9600036-34e9-4ab0-883a-fad419195875",
-                              observacion: `Pago parcial de factura ${f.numero}`,
-                              fecha_pago: new Date().toISOString(),
-                            },
-                          ]);
-
-                        if (pagoError)
-                          console.error(
-                            `⚠️ Error insertando pago ${f.numero}:`,
-                            pagoError.message
-                          );
-                        else
-                          console.log(
-                            `✅ Pago parcial registrado (${f.numero})`
-                          );
+                      if (facturasParciales.length === 0) {
+                        alert("Debes ingresar al menos un monto parcial.");
+                        return;
                       }
 
-                      setPreview(false);
+                      // 🚨 Tilopay no permite múltiples facturas en un pago parcial
+                      if (facturasParciales.length > 1) {
+                        alert("Solo puedes realizar pago parcial de UNA factura a la vez.");
+                        return;
+                      }
+
+                      const f = facturasParciales[0];
+                      const monto = parseFloat(f.montoParcial);
+
+                      setLoadingPago(true);
+                      if (payButtonRef.current) payButtonRef.current.disabled = true;
+
+                      try {
+                        const { data, error } = await supabase.functions.invoke(
+                          "rapid-processor",
+                          {
+                            body: {
+                              monto,
+                              descripcion: `Pago parcial de la factura ${f.numero}`,
+                              id_cliente: cliente.id_cliente,
+                              id_factura: f.id_factura,
+                              parcial: true,
+                            },
+                          }
+                        );
+
+                        if (error) {
+                          console.error("❌ Error en Edge Function:", error);
+                          throw new Error(error.message || "Error creando el pago parcial");
+                        }
+
+                        let parsed = data;
+                        if (typeof parsed === "string") {
+                          parsed = JSON.parse(parsed);
+                        }
+
+                        if (!parsed?.url) {
+                          throw new Error("Tilopay no devolvió URL de pago.");
+                        }
+
+                        // Redirección compatible con móvil
+                        setTimeout(() => {
+                          window.open(parsed.url, "_self");
+                        }, 50);
+
+                      } catch (e) {
+                        alert(`Error:\n${e.message}`);
+                      } finally {
+                        setLoadingPago(false);
+                        if (payButtonRef.current) payButtonRef.current.disabled = false;
+                      }
                     }}
                     className="w-full bg-linear-to-r from-orange-500 to-pink-500 text-white py-3 rounded-xl text-sm font-medium shadow-md hover:shadow-lg transition-transform hover:-translate-y-0.5 mb-3 flex items-center justify-center gap-2"
                   >
                     <CheckCircle2 className="w-5 h-5" />
                     Confirmar Pago Parcial
                   </button>
+
 
                   <button
                     onClick={() => setPreview(false)}
