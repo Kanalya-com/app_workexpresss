@@ -400,6 +400,70 @@ export default function Facturas({ cliente }) {
       if (payButtonRef.current) payButtonRef.current.disabled = false;
     }
   };
+  const handlePagoParcial = async () => {
+    if (loadingPago) return;
+
+    setLoadingPago(true);
+    if (payButtonRef.current) payButtonRef.current.disabled = true;
+
+    try {
+      // Filtrar SOLO la factura con monto parcial válido
+      const facturasParciales = facturasSeleccionadas.filter(
+        (f) =>
+          selected.includes(f.numero) &&
+          parseFloat(f.montoParcial) > 0
+      );
+
+      if (facturasParciales.length === 0) {
+        throw new Error("Debes ingresar al menos un monto parcial.");
+      }
+
+      if (facturasParciales.length > 1) {
+        throw new Error("Solo puedes realizar pago parcial de UNA factura a la vez.");
+      }
+
+      const f = facturasParciales[0];
+      const monto = parseFloat(f.montoParcial);
+
+      const { data, error } = await supabase.functions.invoke(
+        "rapid-processor",
+        {
+          body: {
+            monto,
+            descripcion: `Pago parcial de la factura ${f.numero}`,
+            id_cliente: cliente.id_cliente,
+            id_factura: f.id_factura,
+            parcial: true,
+          },
+        }
+      );
+
+      if (error) {
+        console.error("❌ Error en Edge Function:", error);
+        throw new Error(error.message || "Error creando el pago parcial");
+      }
+
+      let parsed = data;
+      if (typeof parsed === "string") {
+        parsed = JSON.parse(parsed);
+      }
+
+      if (!parsed?.url) {
+        throw new Error("Tilopay no devolvió URL de pago.");
+      }
+
+      // Redirección mobile-safe
+      setTimeout(() => {
+        window.open(parsed.url, "_self");
+      }, 50);
+
+    } catch (error) {
+      alert(`Error creando el pago parcial:\n${error.message}`);
+    } finally {
+      setLoadingPago(false);
+      if (payButtonRef.current) payButtonRef.current.disabled = false;
+    }
+  };
 
   //  UI principal
   return (
@@ -693,72 +757,40 @@ export default function Facturas({ cliente }) {
                   </div>
 
                   <button
-                    onClick={async () => {
-                      const facturasParciales = facturasSeleccionadas
-                        .filter((f) => selected.includes(f.numero) && parseFloat(f.montoParcial) > 0);
-
-                      if (facturasParciales.length === 0) {
-                        alert("Debes ingresar al menos un monto parcial.");
-                        return;
-                      }
-
-                      // 🚨 Tilopay no permite múltiples facturas en un pago parcial
-                      if (facturasParciales.length > 1) {
-                        alert("Solo puedes realizar pago parcial de UNA factura a la vez.");
-                        return;
-                      }
-
-                      const f = facturasParciales[0];
-                      const monto = parseFloat(f.montoParcial);
-
-                      setLoadingPago(true);
-                      if (payButtonRef.current) payButtonRef.current.disabled = true;
-
-                      try {
-                        const { data, error } = await supabase.functions.invoke(
-                          "rapid-processor",
-                          {
-                            body: {
-                              monto,
-                              descripcion: `Pago parcial de la factura ${f.numero}`,
-                              id_cliente: cliente.id_cliente,
-                              id_factura: f.id_factura,
-                              parcial: true,
-                            },
-                          }
-                        );
-
-                        if (error) {
-                          console.error("❌ Error en Edge Function:", error);
-                          throw new Error(error.message || "Error creando el pago parcial");
-                        }
-
-                        let parsed = data;
-                        if (typeof parsed === "string") {
-                          parsed = JSON.parse(parsed);
-                        }
-
-                        if (!parsed?.url) {
-                          throw new Error("Tilopay no devolvió URL de pago.");
-                        }
-
-                        // Redirección compatible con móvil
-                        setTimeout(() => {
-                          window.open(parsed.url, "_self");
-                        }, 50);
-
-                      } catch (e) {
-                        alert(`Error:\n${e.message}`);
-                      } finally {
-                        setLoadingPago(false);
-                        if (payButtonRef.current) payButtonRef.current.disabled = false;
-                      }
-                    }}
-                    className="w-full bg-linear-to-r from-orange-500 to-pink-500 text-white py-3 rounded-xl text-sm font-medium shadow-md hover:shadow-lg transition-transform hover:-translate-y-0.5 mb-3 flex items-center justify-center gap-2"
+                    ref={payButtonRef}
+                    onClick={handlePagoParcial}
+                    className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium text-white bg-linear-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed w-full mb-3"
+                    disabled={loadingPago}
                   >
-                    <CheckCircle2 className="w-5 h-5" />
-                    Confirmar Pago Parcial
+                    {loadingPago ? (
+                      <div className="flex items-center gap-2">
+                        <svg
+                          className="animate-spin h-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                          ></path>
+                        </svg>
+                        Procesando...
+                      </div>
+                    ) : (
+                      "Confirmar Pago Parcial"
+                    )}
                   </button>
+
 
 
                   <button
