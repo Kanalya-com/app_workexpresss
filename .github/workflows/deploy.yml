@@ -47,7 +47,7 @@ jobs:
       - name: Deploy to server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            cd /opt/app_workexpress
+            cd /opt/app_workexpresss
             
             git fetch --all
             git reset --hard origin/main
