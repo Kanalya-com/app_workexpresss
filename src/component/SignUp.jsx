@@ -89,7 +89,7 @@ export default function SignUp({ onNavigate }) {
         email: form.correo_principal,
         password: form.password,
         options: {
-          emailRedirectTo: "https://app-workexpress.netlify.app/confirmacion-correo",
+          emailRedirectTo: "https://app.workexpress.online/confirmacion-correo",
         },
       });
       if (authError) throw new Error(authError.message);

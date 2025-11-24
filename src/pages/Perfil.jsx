@@ -133,34 +133,30 @@ useEffect(() => {
 /*                               SECCIÓN: PERSONAL                            */
 /* -------------------------------------------------------------------------- */
 function Personal({ cliente, editMode, setEditMode, saving, handleSave, setCliente }) {
-  const [popupVisible, setPopupVisible] = useState(false);
-  const [popupType, setPopupType] = useState("success");
-  const [popupMessage, setPopupMessage] = useState("");
   const [popup, setPopup] = useState({ show: false, success: false, message: "" });
 
   // 🔹 Envolvemos handleSave para mostrar el popup automáticamente
-  const handleSaveWithPopup = async () => {
-    try {
-      await handleSave(); // ejecuta tu función de guardado original
-      setPopupType("success");
-      setPopupMessage("Los cambios se han guardado correctamente.");
-      setPopupVisible(true);
-    } catch (error) {
-      console.error(error);
-      setPopupType("error");
-      setPopupMessage("Ocurrió un error al guardar los cambios.");
-      setPopupVisible(true);
-    }
-  };
-  useEffect(() => {
-  if (popup.show) {
-    const timer = setTimeout(
-      () => setPopup(prev => ({ ...prev, show: false })), 
-      2500
-    );
-    return () => clearTimeout(timer);
+const handleSaveWithPopup = async () => {
+  try {
+    await handleSave();
+
+    setPopup({
+      show: true,
+      success: true,
+      message: "Los cambios se han guardado correctamente."
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    setPopup({
+      show: true,
+      success: false,
+      message: "Ocurrió un error al guardar los cambios."
+    });
   }
-}, [popup.show]);
+};
+
 
 
 
@@ -293,7 +289,7 @@ function Seguridad() {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: "https://app-prueba-wokrexpress.netlify.app/reset-password",
+      redirectTo: "https://app.workexpress.online/reset-password",
     });
 
     if (error) {

@@ -194,6 +194,36 @@ export const usePerfilStore = create((set, get) => ({
     set({ loadingSeguro: false });
   }
 },
+/* ==========================================
+ *   GUARDAR PERFIL (cedula, telefono, etc)
+ * ========================================== */
+guardarPerfil: async (cliente) => {
+  set({ savingPerfil: true });
+
+  try {
+    const { error } = await supabase
+      .from("tb_cliente")
+      .update({
+        cedula: cliente.cedula,
+        telefono: cliente.telefono,
+        direccion: cliente.direccion,
+      })
+      .eq("id_cliente", cliente.id_cliente);
+
+    if (error) throw error;
+
+    // actualizar el estado global
+    set({ cliente });
+
+    return { success: true };
+
+  } catch (err) {
+    console.error("Error guardar perfil:", err);
+    return { success: false, error: err };
+  } finally {
+    set({ savingPerfil: false });
+  }
+},
 
 
   /* ==========================================
