@@ -9,6 +9,7 @@ import ErrorPages from "./pages/NotFound";
 import Seguimiento from "./pages/Seguimiento";
 import Facturas from "./pages/Facturas";
 import Perfil from "./pages/Perfil";
+import RecivoFactura from "./pages/RecivoFactura";
 import ConfirmacionCorreo from "./pages/ConfirmacionCorreo";
 import { AuthProvider } from "./context/AuthContext";
 import PrivateRoute from "./component/PrivateRoute";
@@ -84,6 +85,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Facturas cliente={clienteActual} />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/Recivo-factura"
+              element={
+                <PrivateRoute>
+                  <RecivoFactura/>
                 </PrivateRoute>
               }
             />

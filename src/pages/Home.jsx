@@ -147,9 +147,9 @@ export default function Home() {
           {/* MOBILE: todo en columna */}
           <div className="flex flex-col gap-4 lg:hidden">
             <WillySeguimiento />
+            <Promociones onModalChange={modalHandlers.promociones} />
             <Paquetes />
-            {/* <Promociones onModalChange={modalHandlers.promociones} />
-            <Cartilla /> */}
+            {/* <Cartilla />  */}
             <Casillero cliente={cliente} onModalChange={modalHandlers.casillero} />
           </div>
 
