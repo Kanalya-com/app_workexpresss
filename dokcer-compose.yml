@@ -1,0 +1,40 @@
+version: "3.9"
+
+networks:
+  traefik_network:
+    external: true
+
+services:
+  app-blue:
+    image: ghcr.io/kanalya-com/app_workexpress:latest
+    container_name: app_workexpress_blue
+    networks:
+      - traefik_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app-blue.rule=Host(`app.workexpress.online`)"
+      - "traefik.http.services.app-blue.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 80 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  app-green:
+    image: ghcr.io/kanalya-com/app_workexpress:latest
+    container_name: app_workexpress_green
+    networks:
+      - traefik_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app-green.rule=Host(`app.workexpress.online`)"
+      - "traefik.http.services.app-green.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 80 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
