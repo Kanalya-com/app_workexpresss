@@ -26,59 +26,59 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-useEffect(() => {
-  const fetchCliente = async () => {
-    // 1️⃣ obtener email desde URL
-    const url = new URL(window.location.href);
-    const emailURL = url.searchParams.get("email");
+  useEffect(() => {
+    const fetchCliente = async () => {
+      // 1️⃣ obtener email desde URL
+      const url = new URL(window.location.href);
+      const emailURL = url.searchParams.get("email");
 
-    // 2️⃣ obtener email desde Supabase Auth (si hay sesión)
-    const { data: userData } = await supabase.auth.getUser();
-    const emailAuth = userData?.user?.email;
+      // 2️⃣ obtener email desde Supabase Auth (si hay sesión)
+      const { data: userData } = await supabase.auth.getUser();
+      const emailAuth = userData?.user?.email;
 
-    // 3️⃣ prioridad: email desde URL → email desde sesión
-    const emailFinal = emailURL || emailAuth;
-    if (!emailFinal) return;
+      // 3️⃣ prioridad: email desde URL → email desde sesión
+      const emailFinal = emailURL || emailAuth;
+      if (!emailFinal) return;
 
-    // 4️⃣ buscar cliente en la base de datos
-    const { data, error } = await supabase
-      .from("tb_cliente")
-      .select(`
-        id_cliente,
-        nombre,
-        apellido,
-        email,
-        telefono,
-        cedula,
-        direccion,
-        cliente_activo,
-        id_sucursal,
-        id_plan,
-        sucursal:tb_sucursal!id_sucursal (
-          id_sucursal,
+      // 4️⃣ buscar cliente en la base de datos
+      const { data, error } = await supabase
+        .from("tb_cliente")
+        .select(`
+          id_cliente,
           nombre,
+          apellido,
+          email,
+          telefono,
+          cedula,
           direccion,
-          telefono
-        ),
-        plan:tb_plan!id_plan (
+          cliente_activo,
+          id_sucursal,
           id_plan,
-          descripcion,
-          precio,
-          beneficios
-        )
-      `)
-      .eq("email", emailFinal)
-      .single();
+          sucursal:tb_sucursal!id_sucursal (
+            id_sucursal,
+            nombre,
+            direccion,
+            telefono
+          ),
+          plan:tb_plan!id_plan (
+            id_plan,
+            descripcion,
+            precio,
+            beneficios
+          )
+        `)
+        .eq("email", emailFinal)
+        .single();
 
-    if (!error && data) {
-      setClienteActual(data);
-    } else {
-      console.error("🔥 Error cargando cliente:", error);
-    }
-  };
+      if (!error && data) {
+        setClienteActual(data);
+      } else {
+        console.error("🔥 Error cargando cliente:", error);
+      }
+    };
 
-  fetchCliente();
-}, []);
+    fetchCliente();
+  }, []);
 
 
 

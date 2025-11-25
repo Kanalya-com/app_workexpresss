@@ -114,16 +114,31 @@ export default function ActualizarDatos({ cliente }) {
             return;
         }
 
-        // 2️⃣ Crear usuario Auth con password
-        const { error: authError } = await supabase.auth.admin.createUser({
-            email: form.email,
-            password: form.password,
-            email_confirm: false,
-            user_metadata: {
-                nombre: form.nombre,
-                apellido: form.apellido,
-            },
-        });
+        const resp = await fetch(
+            "https://rknrqthsiacqpbqivres.supabase.co/functions/v1/registrar-usuario",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: form.email,
+                    password: form.password,
+                    nombre: form.nombre,
+                    apellido: form.apellido
+                })
+            }
+        );
+
+        const result = await resp.json();
+
+        if (!result.ok) {
+            setPopup({
+                show: true,
+                message: result.error,
+                type: "error"
+            });
+            return;
+        }
+
 
         if (authError) {
             setPopup({
