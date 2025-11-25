@@ -11,51 +11,78 @@ import Facturas from "./pages/Facturas";
 import Perfil from "./pages/Perfil";
 import RecivoFactura from "./pages/RecivoFactura";
 import ConfirmacionCorreo from "./pages/ConfirmacionCorreo";
+import ActualizarDatos from "./pages/ActualizarDatos";  // 👈 NUEVO
 import { AuthProvider } from "./context/AuthContext";
 import PrivateRoute from "./component/PrivateRoute";
-import { ThemeProvider } from "./component/ThemeProvider"; // 👈 importa aquí
+import { ThemeProvider } from "./component/ThemeProvider";
 import { supabase } from "./lib/supabaseClient";
+
 function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [clienteActual, setClienteActual] = useState(null);
+
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 1500);
     return () => clearTimeout(timer);
   }, []);
-  useEffect(() => {
-    const fetchCliente = async () => {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user) return;
 
-      const email = userData.user.email;
+useEffect(() => {
+  const fetchCliente = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
 
-      const { data, error } = await supabase
-        .from("tb_cliente")
-        .select("id_cliente, nombre, email")
-        .eq("email", email)
-        .single();
+    const email = userData.user.email;
 
-      if (error) {
-        console.error("❌ Error obteniendo cliente:", error.message);
-      } else {
-        // console.log("✅ Cliente encontrado:", data);
-        setClienteActual(data);
-      }
-    };
+    const { data, error } = await supabase
+      .from("tb_cliente")
+      .select(`
+        id_cliente,
+        nombre,
+        apellido,
+        email,
+        telefono,
+        cedula,
+        direccion,
+        cliente_activo,
+        id_sucursal,
+        id_plan,
+        sucursal:tb_sucursal!id_sucursal (
+          id_sucursal,
+          nombre,
+          direccion,
+          telefono
+        ),
+        plan:tb_plan!id_plan (
+          id_plan,
+          descripcion,
+          precio,
+          beneficios
+        )
+      `)
+      .eq("email", email)
+      .single();
 
-    fetchCliente();
-  }, []);
-  if (showSplash) {
-    return <SplashScreen onFinish={() => setShowSplash(false)} />;
-  }
+    if (!error && data) {
+      setClienteActual(data);
+    } else {
+      console.error("🔥 Error cargando cliente:", error);
+    }
+  };
+
+  fetchCliente();
+}, []);
+
+
+
+  if (showSplash) return <SplashScreen />;
 
   return (
-    // 👇 Aquí el cambio importante
     <ThemeProvider>
       <AuthProvider>
         <Router>
           <Routes>
             <Route path="/" element={<Auth />} />
+
             <Route
               path="/home"
               element={
@@ -64,6 +91,13 @@ function App() {
                 </PrivateRoute>
               }
             />
+
+            <Route
+              path="/actualizar-datos"
+              element={<ActualizarDatos cliente={clienteActual} />}
+            />
+
+
             <Route
               path="/seguimiento"
               element={
@@ -72,6 +106,7 @@ function App() {
                 </PrivateRoute>
               }
             />
+
             <Route
               path="/perfil"
               element={
@@ -80,6 +115,7 @@ function App() {
                 </PrivateRoute>
               }
             />
+
             <Route
               path="/facturas"
               element={
@@ -88,16 +124,19 @@ function App() {
                 </PrivateRoute>
               }
             />
+
             <Route
               path="/recibo-factura/:id"
               element={
                 <PrivateRoute>
-                  <RecivoFactura/>
+                  <RecivoFactura />
                 </PrivateRoute>
               }
             />
+
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/confirmacion-correo" element={<ConfirmacionCorreo />} />
+
             <Route path="*" element={<ErrorPages />} />
           </Routes>
         </Router>
