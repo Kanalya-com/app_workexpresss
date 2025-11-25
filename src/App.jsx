@@ -28,11 +28,19 @@ function App() {
 
 useEffect(() => {
   const fetchCliente = async () => {
+    // 1️⃣ obtener email desde URL
+    const url = new URL(window.location.href);
+    const emailURL = url.searchParams.get("email");
+
+    // 2️⃣ obtener email desde Supabase Auth (si hay sesión)
     const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
+    const emailAuth = userData?.user?.email;
 
-    const email = userData.user.email;
+    // 3️⃣ prioridad: email desde URL → email desde sesión
+    const emailFinal = emailURL || emailAuth;
+    if (!emailFinal) return;
 
+    // 4️⃣ buscar cliente en la base de datos
     const { data, error } = await supabase
       .from("tb_cliente")
       .select(`
@@ -59,7 +67,7 @@ useEffect(() => {
           beneficios
         )
       `)
-      .eq("email", email)
+      .eq("email", emailFinal)
       .single();
 
     if (!error && data) {
@@ -71,6 +79,7 @@ useEffect(() => {
 
   fetchCliente();
 }, []);
+
 
 
 
