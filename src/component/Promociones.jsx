@@ -1,7 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
-import Anucio1 from "../assets/img/IMG_9029.JPG";
+import Anuncio1 from "../assets/img/IMG_9029.JPG";
+import Anuncio2 from "../assets/img/black.png"
 export default function Promociones() {
   const [promotions] = useState([
+    {
+      id: 2,
+      title: "BLACK FRIDAY",
+      description: "Pide tu descuento de 10% en todas las cargas recibidas en el mes de octubre.",
+      validUntil: "¡Viene black friday!",
+      discount: "10%",
+      bgColor: "from-[#f2af1e]/90 to-[#b71f4b]/90",
+      image: Anuncio2,
+    },
     {
       id: 1,
       title: "¡Tenemos nueva dirección! ✨",
@@ -10,19 +20,9 @@ export default function Promociones() {
       validUntil: "ATENCIÓN",
       discount: "¡Estrénala YA!",
       bgColor: "from-[#f2af1e]/90 to-[#b71f4b]/90",
-      image: Anucio1,
-    }
+      image: Anuncio1,
+    },
     // ,
-    // {
-    //   id: 2,
-    //   title: "🚚 Envío Express Gratis",
-    //   description: "En compras mayores a 100 lbs este mes.",
-    //   validUntil: "31 de Diciembre",
-    //   discount: "GRATIS",
-    //   bgColor: "from-[#f2af1e]/90 to-[#b71f4b]/90",
-    //   image:
-    //     "https://upload.wikimedia.org/wikipedia/commons/1/10/Catedral_de_Azuero%2C_Chitr%C3%A9.JPG",
-    // },
     // {
     //   id: 3,
     //   title: "🚚 Envío Express Gratis",
@@ -110,7 +110,7 @@ export default function Promociones() {
 
                   <div className="flex items-end justify-between mt-4">
                     <div className="text-white">
-                      <span className="opacity-90 text-sm">Tu casillero ya cambió</span>
+                      <span className="opacity-90 text-sm">Descuento</span>
                       <p className="text-xl font-bold">{promo.discount}</p>
                     </div>
                     <a href="https://workyshopping.com/so/36PgvH81s?languageTag=en">
