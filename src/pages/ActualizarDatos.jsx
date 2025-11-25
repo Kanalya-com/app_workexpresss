@@ -164,7 +164,9 @@ export default function ActualizarDatos({ cliente }) {
             show: true,
             message: "Cuenta creada y datos actualizados. Revisa tu correo.",
             type: "success"
+            
         });
+        setTimeout(() => navigate("/"), 1500);
 
 
     };
@@ -179,7 +181,6 @@ export default function ActualizarDatos({ cliente }) {
                 type={popup.type}
                 onClose={() => {
                     setPopup({ show: false, message: "", type: "success" });
-                    navigate("/");
                 }}
             />
 
