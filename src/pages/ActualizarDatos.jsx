@@ -113,51 +113,60 @@ export default function ActualizarDatos({ cliente }) {
         });
         return;
     }
-
-    // 2️⃣ Llamar a la edge function registrar-usuario
     let resp;
-    try {
-        resp = await fetch(
-            "https://rknrqthsiacqpbqivres.supabase.co/functions/v1/registrar-usuario",
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: form.email,
-                    password: form.password,
-                    nombre: form.nombre,
-                    apellido: form.apellido
-                })
-            }
-        );
-    } catch (e) {
-        setPopup({
-            show: true,
-            message: "No se pudo conectar con el servidor.",
-            type: "error",
-        });
-        return;
-    }
 
-    const result = await resp.json();
-
-    if (!result.ok) {
-        setPopup({
-            show: true,
-            message: "No se pudo crear la cuenta: " + result.error,
-            type: "error"
-        });
-        return;
-    }
-
-    // 3️⃣ Todo OK → éxito
+try {
+    resp = await fetch(
+        "https://rknrqthsiacqpbqivres.supabase.co/functions/v1/registrar-usuario",
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: form.email,
+                password: form.password,
+                nombre: form.nombre,
+                apellido: form.apellido
+            })
+        }
+    );
+} catch (e) {
     setPopup({
         show: true,
-        message: "Datos guardados. Revisa tu correo para confirmar tu cuenta.",
-        type: "success",
+        message: "No se pudo conectar con el servidor.",
+        type: "error"
     });
+    return;
+}
 
-    setTimeout(() => navigate("/"), 2500);
+// ⚠️ Si la función falla → resp.status NO es 200
+if (!resp.ok) {
+    let errorMessage = `Error ${resp.status}`;
+    try {
+        const errJson = await resp.json();
+        if (errJson.error) errorMessage = errJson.error;
+    } catch { }
+
+    setPopup({
+        show: true,
+        message: "No se pudo crear la cuenta: " + errorMessage,
+        type: "error"
+    });
+    return;
+}
+
+// 🔥 ÉXITO
+const result = await resp.json();
+
+setPopup({
+    show: true,
+    message: "Cuenta creada y datos actualizados. Revisa tu correo.",
+    type: "success"
+});
+
+setTimeout(() => navigate("/"), 2500);
+
 };
 
     <Popup
