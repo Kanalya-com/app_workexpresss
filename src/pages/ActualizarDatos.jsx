@@ -77,44 +77,47 @@ export default function ActualizarDatos({ cliente }) {
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+    e.preventDefault();
 
-        // Validar contraseñas
-        if (form.password !== form.confirmPassword) {
-            setPopup({
-                show: true,
-                message: "Las contraseñas no coinciden.",
-                type: "error"
-            });
-            return;
-        }
+    // Validar contraseñas
+    if (form.password !== form.confirmPassword) {
+        setPopup({
+            show: true,
+            message: "Las contraseñas no coinciden.",
+            type: "error"
+        });
+        return;
+    }
 
-        // 1️⃣ Actualizar datos del cliente
-        const { error: updateError } = await supabase
-            .from("tb_cliente")
-            .update({
-                nombre: form.nombre,
-                apellido: form.apellido,
-                telefono: form.telefono,
-                cedula: form.cedula,
-                direccion: form.direccion,
-                id_sucursal: form.id_sucursal,
-                id_plan: form.id_plan,
-                cliente_activo: true,
-                updated_at: new Date(),
-            })
-            .eq("email", form.email);
+    // 1️⃣ Actualizar cliente en la tabla
+    const { error: updateError } = await supabase
+        .from("tb_cliente")
+        .update({
+            nombre: form.nombre,
+            apellido: form.apellido,
+            telefono: form.telefono,
+            cedula: form.cedula,
+            direccion: form.direccion,
+            id_sucursal: form.id_sucursal,
+            id_plan: form.id_plan,
+            cliente_activo: true,
+            updated_at: new Date(),
+        })
+        .eq("email", form.email);
 
-        if (updateError) {
-            setPopup({
-                show: true,
-                message: "Error actualizando datos.",
-                type: "error",
-            });
-            return;
-        }
+    if (updateError) {
+        setPopup({
+            show: true,
+            message: "Error actualizando datos.",
+            type: "error",
+        });
+        return;
+    }
 
-        const resp = await fetch(
+    // 2️⃣ Llamar a la edge function registrar-usuario
+    let resp;
+    try {
+        resp = await fetch(
             "https://rknrqthsiacqpbqivres.supabase.co/functions/v1/registrar-usuario",
             {
                 method: "POST",
@@ -127,38 +130,36 @@ export default function ActualizarDatos({ cliente }) {
                 })
             }
         );
-
-        const result = await resp.json();
-
-        if (!result.ok) {
-            setPopup({
-                show: true,
-                message: result.error,
-                type: "error"
-            });
-            return;
-        }
-
-
-        if (authError) {
-            setPopup({
-                show: true,
-                message: "Este correo ya tiene una cuenta creada.",
-                type: "error",
-            });
-            return;
-        }
-
+    } catch (e) {
         setPopup({
             show: true,
-            message: "Datos actualizados con éxito. Revisa tu correo.",
-            type: "success",
+            message: "No se pudo conectar con el servidor.",
+            type: "error",
         });
-        setTimeout(() => {
-            navigate("/");
-        }, 2500);
+        return;
+    }
 
-    };
+    const result = await resp.json();
+
+    if (!result.ok) {
+        setPopup({
+            show: true,
+            message: "No se pudo crear la cuenta: " + result.error,
+            type: "error"
+        });
+        return;
+    }
+
+    // 3️⃣ Todo OK → éxito
+    setPopup({
+        show: true,
+        message: "Datos guardados. Revisa tu correo para confirmar tu cuenta.",
+        type: "success",
+    });
+
+    setTimeout(() => navigate("/"), 2500);
+};
+
     <Popup
         show={popup.show}
         message={popup.message}
