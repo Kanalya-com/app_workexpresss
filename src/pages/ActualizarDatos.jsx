@@ -166,7 +166,6 @@ export default function ActualizarDatos({ cliente }) {
             type: "success"
         });
 
-        setTimeout(() => navigate("/"), 2500);
 
     };
 
@@ -178,8 +177,12 @@ export default function ActualizarDatos({ cliente }) {
                 show={popup.show}
                 message={popup.message}
                 type={popup.type}
-                onClose={() => setPopup({ ...popup, show: false })}
+                onClose={() => {
+                    setPopup({ show: false, message: "", type: "success" });
+                    navigate("/");
+                }}
             />
+
             <div className="min-h-screen flex items-center justify-center px-6 bg-gray-100">
                 <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-md space-y-6">
 
