@@ -77,97 +77,98 @@ export default function ActualizarDatos({ cliente }) {
     };
 
     const handleSubmit = async (e) => {
-    e.preventDefault();
+        e.preventDefault();
 
-    // Validar contraseñas
-    if (form.password !== form.confirmPassword) {
-        setPopup({
-            show: true,
-            message: "Las contraseñas no coinciden.",
-            type: "error"
-        });
-        return;
-    }
-
-    // 1️⃣ Actualizar cliente en la tabla
-    const { error: updateError } = await supabase
-        .from("tb_cliente")
-        .update({
-            nombre: form.nombre,
-            apellido: form.apellido,
-            telefono: form.telefono,
-            cedula: form.cedula,
-            direccion: form.direccion,
-            id_sucursal: form.id_sucursal,
-            id_plan: form.id_plan,
-            cliente_activo: true,
-            updated_at: new Date(),
-        })
-        .eq("email", form.email);
-
-    if (updateError) {
-        setPopup({
-            show: true,
-            message: "Error actualizando datos.",
-            type: "error",
-        });
-        return;
-    }
-    let resp;
-
-try {
-    resp = await fetch(
-        "https://rknrqthsiacqpbqivres.supabase.co/functions/v1/registrar-usuario",
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                email: form.email,
-                password: form.password,
-                nombre: form.nombre,
-                apellido: form.apellido
-            })
+        // Validar contraseñas
+        if (form.password !== form.confirmPassword) {
+            setPopup({
+                show: true,
+                message: "Las contraseñas no coinciden.",
+                type: "error"
+            });
+            return;
         }
-    );
-} catch (e) {
-    setPopup({
-        show: true,
-        message: "No se pudo conectar con el servidor.",
-        type: "error"
-    });
-    return;
-}
 
-// ⚠️ Si la función falla → resp.status NO es 200
-if (!resp.ok) {
-    let errorMessage = `Error ${resp.status}`;
-    try {
-        const errJson = await resp.json();
-        if (errJson.error) errorMessage = errJson.error;
-    } catch { }
+        // 1️⃣ Actualizar cliente en la tabla
+        const { error: updateError } = await supabase
+            .from("tb_cliente")
+            .update({
+                nombre: form.nombre,
+                apellido: form.apellido,
+                telefono: form.telefono,
+                cedula: form.cedula,
+                direccion: form.direccion,
+                id_sucursal: form.id_sucursal,
+                id_plan: form.id_plan,
+                cliente_activo: true,
+                updated_at: new Date(),
+            })
+            .eq("email", form.email);
 
-    setPopup({
-        show: true,
-        message: "No se pudo crear la cuenta: " + errorMessage,
-        type: "error"
-    });
-    return;
-}
+        if (updateError) {
+            setPopup({
+                show: true,
+                message: "Error actualizando datos.",
+                type: "error",
+            });
+            return;
+        }
+        let resp;
 
-// 🔥 ÉXITO
-const result = await resp.json();
+        try {
+            resp = await fetch(
+                "https://rknrqthsiacqpbqivres.supabase.co/functions/v1/registrar-usuario",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        email: form.email,
+                        password: form.password,
+                        nombre: form.nombre,
+                        apellido: form.apellido
+                    })
+                }
+            );
+        } catch (e) {
+            setPopup({
+                show: true,
+                message: "No se pudo conectar con el servidor.",
+                type: "error"
+            });
+            return;
+        }
 
-setPopup({
-    show: true,
-    message: "Cuenta creada y datos actualizados. Revisa tu correo.",
-    type: "success"
-});
+        // ⚠️ Si la función falla → resp.status NO es 200
+        if (!resp.ok) {
+            let errorMessage = `Error ${resp.status}`;
+            try {
+                const errJson = await resp.json();
+                if (errJson.error) errorMessage = errJson.error;
+            } catch { }
 
-setTimeout(() => navigate("/"), 2500);
+            setPopup({
+                show: true,
+                message: "No se pudo crear la cuenta: " + errorMessage,
+                type: "error"
+            });
+            return;
+        }
 
-};
+        // 🔥 ÉXITO
+        const result = await resp.json();
+
+        setPopup({
+            show: true,
+            message: "Cuenta creada y datos actualizados. Revisa tu correo.",
+            type: "success"
+        });
+
+        setTimeout(() => navigate("/"), 2500);
+
+    };
 
     <Popup
         show={popup.show}
