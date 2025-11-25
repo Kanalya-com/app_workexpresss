@@ -90,31 +90,31 @@ export default function Auth() {
 
 
 
-  // 🔹 LOGIN
-  const handleLogin = async (email, password) => {
-    setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    setLoading(false);
+const handleLogin = async (email, password) => {
+  setLoading(true);
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  setLoading(false);
 
-    if (error) {
-      setPopup({
-        show: true,
-        message: "Error al iniciar sesión: " + error.message,
-        type: "error",
-      });
-    } else {
-      setPopup({
-        show: true,
-        message: "Sesión iniciada correctamente.",
-        type: "success",
-      });
-      localStorage.setItem("user", JSON.stringify(data.user));
-      setTimeout(() => navigate("/Home"), 1000);
-    }
-  };
+  if (error) {
+    setPopup({
+      show: true,
+      message: "Error al iniciar sesión: " + error.message,
+      type: "error",
+    });
+    return false; // ❌ Login falló
+  } else {
+    setPopup({
+      show: true,
+      message: "Sesión iniciada correctamente.",
+      type: "success",
+    });
+    localStorage.setItem("user", JSON.stringify(data.user));
+    return true; // ✅ Login correcto
+  }
+};
 
 
 
@@ -142,15 +142,22 @@ export default function Auth() {
   };
 
 
-  return (
-    <ThemeProvider>
-      <Login
-        onLogin={(email, pass) => handleLogin(email, pass)}
-        onForgotPassword={handleForgotPassword}
-        onNavigate={() => { }}
-      />
 
-    </ThemeProvider>
 
-  );
+return (
+  <ThemeProvider>
+    <Login
+      onLogin={handleLogin}
+      onForgotPassword={handleForgotPassword}
+      onNavigate={(ruta) => navigate(ruta)}   // 👈 ESTA ES LA CLAVE
+    />
+
+    <Popup
+      show={popup.show}
+      message={popup.message}
+      type={popup.type}
+      onClose={() => setPopup({ ...popup, show: false })}
+    />
+  </ThemeProvider>
+);
 }

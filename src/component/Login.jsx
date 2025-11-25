@@ -15,13 +15,19 @@ export default function Login({ onLogin, onNavigate, onForgotPassword, onRegiste
   const [showPassword, setShowPassword] = useState(false);
   const [view, setView] = useState("login"); // qué pantalla mostrar
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (email && password) {
-      onLogin(email, password);
-      onNavigate("/home"); // 👈 cambia vista o redirige
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (email && password) {
+    const ok = await onLogin(email, password); // 👈 espera la respuesta
+
+    if (ok) {
+      // Solo si el login fue exitoso navegas
+      onNavigate("/home");
     }
-  };
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f9fbff] dark:bg-[#01060c] p-6 relative">
