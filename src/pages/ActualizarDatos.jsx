@@ -170,149 +170,153 @@ export default function ActualizarDatos({ cliente }) {
 
     };
 
-    <Popup
-        show={popup.show}
-        message={popup.message}
-        type={popup.type}
-        onClose={() => setPopup({ ...popup, show: false })}
-    />
+
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-6 bg-gray-100">
-            <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-md space-y-6">
+        <>
+            <Popup
+                show={popup.show}
+                message={popup.message}
+                type={popup.type}
+                onClose={() => setPopup({ ...popup, show: false })}
+            />
+            <div className="min-h-screen flex items-center justify-center px-6 bg-gray-100">
+                <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-md space-y-6">
 
-                <h1 className="text-3xl font-bold text-center text-gray-900">
-                    Actualizar Datos
-                </h1>
+                    <h1 className="text-3xl font-bold text-center text-gray-900">
+                        Actualizar Datos
+                    </h1>
 
-                <p className="text-gray-600 text-center text-sm">
-                    Completa tu información para activar tu casillero
-                </p>
+                    <p className="text-gray-600 text-center text-sm">
+                        Completa tu información para activar tu casillero
+                    </p>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-4">
 
-                    {/* Campos estándar con íconos */}
-                    {[
-                        { label: "Correo", name: "email", icon: Mail, disabled: true },
-                        { label: "Nombre", name: "nombre", icon: User },
-                        { label: "Apellido", name: "apellido", icon: User },
-                        { label: "Teléfono", name: "telefono", icon: Phone },
-                        { label: "Cédula", name: "cedula", icon: IdCard },
-                        { label: "Dirección", name: "direccion", icon: MapPin },
-                    ].map(({ label, name, icon: Icon, disabled }) => (
-                        <div key={name} className="space-y-1">
-                            <label className="text-gray-700 text-sm">{label}</label>
-                            <div className="relative">
-                                <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                                <input
-                                    type="text"
-                                    name={name}
-                                    disabled={disabled}
-                                    value={form[name]}
-                                    onChange={handleChange}
-                                    className={`w-full bg-white border border-gray-300 rounded-xl text-gray-900 pl-10 pr-4 py-2 
+                        {/* Campos estándar con íconos */}
+                        {[
+                            { label: "Correo", name: "email", icon: Mail, disabled: true },
+                            { label: "Nombre", name: "nombre", icon: User },
+                            { label: "Apellido", name: "apellido", icon: User },
+                            { label: "Teléfono", name: "telefono", icon: Phone },
+                            { label: "Cédula", name: "cedula", icon: IdCard },
+                            { label: "Dirección", name: "direccion", icon: MapPin },
+                        ].map(({ label, name, icon: Icon, disabled }) => (
+                            <div key={name} className="space-y-1">
+                                <label className="text-gray-700 text-sm">{label}</label>
+                                <div className="relative">
+                                    <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                                    <input
+                                        type="text"
+                                        name={name}
+                                        disabled={disabled}
+                                        value={form[name]}
+                                        onChange={handleChange}
+                                        className={`w-full bg-white border border-gray-300 rounded-xl text-gray-900 pl-10 pr-4 py-2 
                     focus:ring-2 focus:ring-pink-500 outline-none transition ${disabled ? "bg-gray-100 cursor-not-allowed" : ""
-                                        }`}
-                                />
+                                            }`}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* Sucursal */}
+                        <div className="space-y-1">
+                            <label className="text-gray-700 text-sm">Sucursal</label>
+                            <div className="relative">
+                                <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                                <select
+                                    name="id_sucursal"
+                                    value={form.id_sucursal}
+                                    onChange={handleSucursalChange}
+                                    className="w-full bg-white border border-gray-300 rounded-xl text-gray-900 pl-10 pr-4 py-2 focus:ring-2 focus:ring-pink-500 outline-none"
+                                >
+                                    <option value="">Seleccione una sucursal</option>
+                                    {sucursales.map((s) => (
+                                        <option key={s.id_sucursal} value={s.id_sucursal}>
+                                            {s.nombre}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
-                    ))}
 
-                    {/* Sucursal */}
-                    <div className="space-y-1">
-                        <label className="text-gray-700 text-sm">Sucursal</label>
-                        <div className="relative">
-                            <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        {/* Plan */}
+                        <div className="space-y-1">
+                            <label className="text-gray-700 text-sm">Plan</label>
                             <select
-                                name="id_sucursal"
-                                value={form.id_sucursal}
-                                onChange={handleSucursalChange}
-                                className="w-full bg-white border border-gray-300 rounded-xl text-gray-900 pl-10 pr-4 py-2 focus:ring-2 focus:ring-pink-500 outline-none"
+                                name="id_plan"
+                                value={form.id_plan}
+                                onChange={handleChange}
+                                className="w-full bg-white border border-gray-300 rounded-xl text-gray-900 px-4 py-2 focus:ring-2 focus:ring-pink-500 outline-none"
                             >
-                                <option value="">Seleccione una sucursal</option>
-                                {sucursales.map((s) => (
-                                    <option key={s.id_sucursal} value={s.id_sucursal}>
-                                        {s.nombre}
+                                <option value="">Seleccione un plan</option>
+                                {planes.map((p) => (
+                                    <option key={p.id_plan} value={p.id_plan}>
+                                        {p.descripcion} – ${p.precio}
                                     </option>
                                 ))}
                             </select>
                         </div>
-                    </div>
 
-                    {/* Plan */}
-                    <div className="space-y-1">
-                        <label className="text-gray-700 text-sm">Plan</label>
-                        <select
-                            name="id_plan"
-                            value={form.id_plan}
-                            onChange={handleChange}
-                            className="w-full bg-white border border-gray-300 rounded-xl text-gray-900 px-4 py-2 focus:ring-2 focus:ring-pink-500 outline-none"
-                        >
-                            <option value="">Seleccione un plan</option>
-                            {planes.map((p) => (
-                                <option key={p.id_plan} value={p.id_plan}>
-                                    {p.descripcion} – ${p.precio}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Contraseña */}
-                    <div className="space-y-1">
-                        <label className="text-gray-700 text-sm">Contraseña</label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                            <input
-                                type={showPass ? "text" : "password"}
-                                name="password"
-                                value={form.password}
-                                onChange={handleChange}
-                                className="w-full bg-white border border-gray-300 rounded-xl text-gray-900 pl-10 pr-12 py-2 focus:ring-2 focus:ring-pink-500 outline-none"
-                                required
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPass(!showPass)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                            >
-                                {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
-                            </button>
+                        {/* Contraseña */}
+                        <div className="space-y-1">
+                            <label className="text-gray-700 text-sm">Contraseña</label>
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                                <input
+                                    type={showPass ? "text" : "password"}
+                                    name="password"
+                                    value={form.password}
+                                    onChange={handleChange}
+                                    className="w-full bg-white border border-gray-300 rounded-xl text-gray-900 pl-10 pr-12 py-2 focus:ring-2 focus:ring-pink-500 outline-none"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPass(!showPass)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                >
+                                    {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Confirmación */}
-                    <div className="space-y-1">
-                        <label className="text-gray-700 text-sm">Confirmar contraseña</label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                            <input
-                                type={showPass2 ? "text" : "password"}
-                                name="confirmPassword"
-                                value={form.confirmPassword}
-                                onChange={handleChange}
-                                className="w-full bg-white border border-gray-300 rounded-xl text-gray-900 pl-10 pr-12 py-2 focus:ring-2 focus:ring-pink-500 outline-none"
-                                required
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPass2(!showPass2)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                            >
-                                {showPass2 ? <EyeOff size={20} /> : <Eye size={20} />}
-                            </button>
+                        {/* Confirmación */}
+                        <div className="space-y-1">
+                            <label className="text-gray-700 text-sm">Confirmar contraseña</label>
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                                <input
+                                    type={showPass2 ? "text" : "password"}
+                                    name="confirmPassword"
+                                    value={form.confirmPassword}
+                                    onChange={handleChange}
+                                    className="w-full bg-white border border-gray-300 rounded-xl text-gray-900 pl-10 pr-12 py-2 focus:ring-2 focus:ring-pink-500 outline-none"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPass2(!showPass2)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                >
+                                    {showPass2 ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <button
-                        type="submit"
-                        className="w-full py-3 mt-4 rounded-xl text-white font-semibold 
+                        <button
+                            type="submit"
+                            className="w-full py-3 mt-4 rounded-xl text-white font-semibold 
             bg-linear-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 transition"
-                    >
-                        Guardar Información
-                    </button>
-                </form>
+                        >
+                            Guardar Información
+                        </button>
+                    </form>
+                </div>
             </div>
-        </div>
+        </>
+
 
     );
 }
