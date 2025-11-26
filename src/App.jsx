@@ -134,14 +134,7 @@ function App() {
               }
             />
 
-            <Route
-              path="/recibo-factura/:id"
-              element={
-                <PrivateRoute>
-                  <RecivoFactura />
-                </PrivateRoute>
-              }
-            />
+            <Route path="/recibo-factura/:id" element={<RecivoFactura />} />
 
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/confirmacion-correo" element={<ConfirmacionCorreo />} />
