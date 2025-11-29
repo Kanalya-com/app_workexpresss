@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 
 export default function RecivoFactura() {
   const { id } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [loadingPago, setLoadingPago] = useState(false);
 
   async function fetchInvoice() {
     try {
@@ -23,6 +25,55 @@ export default function RecivoFactura() {
   useEffect(() => {
     fetchInvoice();
   }, [id]);
+  const handlePagoTotal = async () => {
+    try {
+      setLoadingPago(true);
+
+      const total = Number(factura.total_calculado);
+
+      if (!total || total <= 0) {
+        alert("La factura no tiene monto pendiente.");
+        return;
+      }
+
+      const descripcion = `Pago factura #${factura.numero}`;
+
+      const { data, error } = await supabase.functions.invoke(
+        "rapid-processor",
+        {
+          body: {
+            monto: total,
+            descripcion,
+            id_cliente: cliente.id_cliente,
+            id_factura: factura.id_factura
+          },
+        }
+      );
+
+      if (error) {
+        console.error("❌ Error Tilopay:", error);
+        alert("No se pudo generar el enlace de pago.");
+        return;
+      }
+
+      let parsed = data;
+      if (typeof parsed === "string") parsed = JSON.parse(parsed);
+
+      if (!parsed?.url) {
+        alert("Tilopay no devolvió URL de pago.");
+        return;
+      }
+
+      // Redirección mobile-safe
+      window.open(parsed.url, "_self");
+
+    } catch (err) {
+      console.error(err);
+      alert("Ocurrió un error creando el pago.");
+    } finally {
+      setLoadingPago(false);
+    }
+  };
 
   if (loading)
     return (
@@ -240,6 +291,14 @@ export default function RecivoFactura() {
             <div className="bg-[#dce6ff] text-[#1f2937] px-4 py-3 rounded-lg mt-4 font-semibold print:bg-gray-200">
               Saldo adeudado: {factura.total_calculado} PAB
             </div>
+            <button
+              onClick={handlePagoTotal}
+              disabled={loadingPago}
+              className="hide-print mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium disabled:opacity-60"
+            >
+              {loadingPago ? "Procesando..." : "Pagar Factura"}
+            </button>
+
           </div>
         </div>
 
