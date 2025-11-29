@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabasePublic } from "../lib/supabasePublic";
-
+import Popup from "../component/Popup";
 
 export default function RecivoFactura() {
   const { id } = useParams();
@@ -9,6 +9,11 @@ export default function RecivoFactura() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [loadingPago, setLoadingPago] = useState(false);
+  const [popupTilopay, setPopupTilopay] = useState({
+    show: false,
+    type: "success",
+    message: ""
+  });
 
   async function fetchInvoice() {
     try {
@@ -26,7 +31,66 @@ export default function RecivoFactura() {
   useEffect(() => {
     fetchInvoice();
   }, [id]);
-  
+  useEffect(() => {
+    const run = async () => {
+      const params = new URLSearchParams(window.location.search);
+
+      const code = params.get("code");               // Tilopay success
+      const wpCancel = params.get("wp_cancel");      // Tilopay cancel
+      const order =
+        params.get("order") ||
+        params.get("order_id") ||
+        params.get("reference");
+
+      // 💚 Pago exitoso
+      if (code === "1") {
+
+        // Notificar backend para procesar la factura
+        if (order) {
+          await supabasePublic.functions.invoke("swift-responder", {
+            body: {
+              order,
+              code: 1,
+              transaction: params.get("tilopay-transaction")
+            }
+          });
+        }
+
+        // Mostrar popup
+        setPopupTilopay({
+          show: true,
+          type: "success",
+          message: "Pago realizado con éxito. Actualizando factura..."
+        });
+
+        // Recargar recibo
+        await fetchInvoice();
+
+        // Limpiar la URL
+        setTimeout(() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }, 300);
+
+        return;
+      }
+
+      // ❌ Pago cancelado
+      if (wpCancel === "yes") {
+        setPopupTilopay({
+          show: true,
+          type: "error",
+          message: "El pago fue cancelado."
+        });
+
+        setTimeout(() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }, 300);
+      }
+    };
+
+    run();
+  }, []);
+
 
   if (loading)
     return (
@@ -44,7 +108,7 @@ export default function RecivoFactura() {
 
   const { factura, cliente, plan, items } = data;
 
-    const handlePagoTotal = async () => {
+  const handlePagoTotal = async () => {
     try {
       setLoadingPago(true);
 
@@ -57,7 +121,7 @@ export default function RecivoFactura() {
 
       const descripcion = `Pago factura #${factura.numero}`;
 
-      const { data, error } = await  supabasePublic.functions.invoke(
+      const { data, error } = await supabasePublic.functions.invoke(
         "rapid-processor",
         {
           body: {
@@ -311,6 +375,13 @@ export default function RecivoFactura() {
         </div>
 
       </div>
+      <Popup
+        show={popupTilopay.show}
+        type={popupTilopay.type}
+        message={popupTilopay.message}
+        onClose={() => setPopupTilopay({ ...popupTilopay, show: false })}
+      />
+
     </div>
   );
 }
