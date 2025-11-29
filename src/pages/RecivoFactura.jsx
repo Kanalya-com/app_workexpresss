@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import { supabasePublic } from "../lib/supabasePublic";
+
 
 export default function RecivoFactura() {
   const { id } = useParams();
@@ -25,7 +26,25 @@ export default function RecivoFactura() {
   useEffect(() => {
     fetchInvoice();
   }, [id]);
-  const handlePagoTotal = async () => {
+  
+
+  if (loading)
+    return (
+      <div className="w-full h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
+      </div>
+    );
+
+  if (error || !data)
+    return (
+      <div className="w-full h-screen flex items-center justify-center">
+        <p className="text-red-600 text-lg font-medium">Error cargando factura.</p>
+      </div>
+    );
+
+  const { factura, cliente, plan, items } = data;
+
+    const handlePagoTotal = async () => {
     try {
       setLoadingPago(true);
 
@@ -38,7 +57,7 @@ export default function RecivoFactura() {
 
       const descripcion = `Pago factura #${factura.numero}`;
 
-      const { data, error } = await supabase.functions.invoke(
+      const { data, error } = await  supabasePublic.functions.invoke(
         "rapid-processor",
         {
           body: {
@@ -74,23 +93,6 @@ export default function RecivoFactura() {
       setLoadingPago(false);
     }
   };
-
-  if (loading)
-    return (
-      <div className="w-full h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
-      </div>
-    );
-
-  if (error || !data)
-    return (
-      <div className="w-full h-screen flex items-center justify-center">
-        <p className="text-red-600 text-lg font-medium">Error cargando factura.</p>
-      </div>
-    );
-
-  const { factura, cliente, plan, items } = data;
-
   return (
     <div className="wrapper bg-[#eef2f7] py-6 px-3 print:p-0 print:m-0">
 

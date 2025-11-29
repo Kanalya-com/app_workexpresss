@@ -31,7 +31,6 @@ function App() {
       // 1️⃣ obtener email desde URL
       const url = new URL(window.location.href);
       const emailURL = url.searchParams.get("email");
-
       // 2️⃣ obtener email desde Supabase Auth (si hay sesión)
       const { data: userData } = await supabase.auth.getUser();
       const emailAuth = userData?.user?.email;
