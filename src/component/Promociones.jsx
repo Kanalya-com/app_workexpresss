@@ -113,7 +113,7 @@ export default function Promociones() {
                       <span className="opacity-90 text-sm">Descuento</span>
                       <p className="text-xl font-bold">{promo.discount}</p>
                     </div>
-                    <a href="https://workyshopping.com/so/36PgvH81s?languageTag=en">
+                    <a href="https://www.workxpresspanama.com/so/e0PeZPANs?languageTag=en">
                       <button className="bg-white/30 text-white hover:opacity-90 text-sm font-medium px-4 py-2 rounded-xl transition">
                       Ver más
                     </button>
