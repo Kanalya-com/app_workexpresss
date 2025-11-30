@@ -16,7 +16,7 @@ export default function Sidebar() {
     { id: "home", icon: Home, path: "/home" },
     { id: "facturas", icon: FileText, path: "/facturas" },
     { id: "seguimiento", icon: Package, path: "/seguimiento" },
-    { id: "analytics", icon: Activity, path: "/analytics" },
+    // { id: "analytics", icon: Activity, path: "/analytics" },
   ];
 
   const bottomItems = [
