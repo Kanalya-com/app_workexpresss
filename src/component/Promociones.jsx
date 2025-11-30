@@ -3,15 +3,15 @@ import Anuncio1 from "../assets/img/IMG_9029.JPG";
 import Anuncio2 from "../assets/img/black.png"
 export default function Promociones() {
   const [promotions] = useState([
-    {
-      id: 2,
-      title: "BLACK FRIDAY",
-      description: "Pide tu descuento de 10% en todas las cargas recibidas en el mes de octubre.",
-      validUntil: "¡Viene black friday!",
-      discount: "10%",
-      bgColor: "from-[#f2af1e]/90 to-[#b71f4b]/90",
-      image: Anuncio2,
-    },
+    // {
+    //   id: 2,
+    //   title: "BLACK FRIDAY",
+    //   description: "Pide tu descuento de 10% en todas las cargas recibidas en el mes de octubre.",
+    //   validUntil: "¡Viene black friday!",
+    //   discount: "10%",
+    //   bgColor: "from-[#f2af1e]/90 to-[#b71f4b]/90",
+    //   image: Anuncio2,
+    // },
     {
       id: 1,
       title: "¡Tenemos nueva dirección! ✨",
